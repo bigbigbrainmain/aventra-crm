@@ -183,7 +183,14 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-slate-900 leading-tight truncate">{lead.businessName}</h2>
+            <a
+              href={`https://www.google.com/search?q=${encodeURIComponent(`${lead.businessName} ${lead.city}`.trim())}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-lg font-bold text-slate-900 leading-tight truncate hover:text-blue-600 hover:underline transition-colors"
+            >
+              {lead.businessName}
+            </a>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <StatusSelect value={lead.status} onChange={handleStatusChange} />
               {lead.priority && priorityCfg && (
