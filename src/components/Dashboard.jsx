@@ -59,14 +59,14 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
         <StatCard label="Total Leads" value={analytics?.totalLeads || 0} onClick={() => setView('leads')} />
         <StatCard label="New" value={analytics?.byStatus?.['New'] || 0} color="text-slate-600" onClick={() => setView('leads')} />
         <StatCard label="Emailed" value={analytics?.byStatus?.['Emailed'] || 0} color="text-blue-600" onClick={() => setView('leads')} />
-        <StatCard label="Replied" value={analytics?.byStatus?.['Replied'] || 0} color="text-purple-600" onClick={() => setView('leads')} />
+        <StatCard label="Called" value={analytics?.byStatus?.['Called'] || 0} color="text-purple-600" onClick={() => setView('leads')} />
         <StatCard label="Booked" value={analytics?.byStatus?.['Booked'] || 0} color="text-amber-600" onClick={() => setView('leads')} />
         <StatCard label="Live/Paid" value={analytics?.byStatus?.['Live/Paid'] || 0} color="text-green-600" onClick={() => setView('leads')} />
       </div>
 
       {/* Priority breakdown */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {['Priority 1', 'Priority 2', 'Priority 3', 'Skip'].map(p => {
+        {['🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3', '🟢 Skip'].map(p => {
           const cfg = getPriorityStyle(p);
           const count = analytics?.byPriority?.[p] || 0;
           return (

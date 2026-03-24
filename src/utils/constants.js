@@ -1,7 +1,7 @@
 export const STATUSES = [
   'New',
   'Emailed',
-  'Replied',
+  'Called',
   'Booked',
   'In Progress',
   'Live/Paid',
@@ -11,7 +11,7 @@ export const STATUSES = [
 export const STATUS_CONFIG = {
   'New':            { bg: 'bg-slate-100',  text: 'text-slate-600',  dot: 'bg-slate-400'  },
   'Emailed':        { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
-  'Replied':        { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+  'Called':         { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
   'Booked':         { bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500'  },
   'In Progress':    { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
   'Live/Paid':      { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
@@ -19,10 +19,10 @@ export const STATUS_CONFIG = {
 };
 
 export const PRIORITY_CONFIG = {
-  'Priority 1': { bg: 'bg-red-100',    text: 'text-red-700',    label: 'P1', dot: 'bg-red-500'    },
-  'Priority 2': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'P2', dot: 'bg-orange-500' },
-  'Priority 3': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'P3', dot: 'bg-yellow-500' },
-  'Skip':        { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Skip', dot: 'bg-green-500'  },
+  '🔴 Priority 1': { bg: 'bg-red-100',    text: 'text-red-700',    label: 'P1',   dot: 'bg-red-500'    },
+  '🟠 Priority 2': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'P2',   dot: 'bg-orange-500' },
+  '🟡 Priority 3': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'P3',   dot: 'bg-yellow-500' },
+  '🟢 Skip':        { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Skip', dot: 'bg-green-500'  },
 };
 
 export function getStatusStyle(status) {
