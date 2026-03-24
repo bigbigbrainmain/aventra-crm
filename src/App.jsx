@@ -1,0 +1,134 @@
+import { useState, useEffect, useCallback } from 'react';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import LeadsView from './components/LeadsView';
+import TasksView from './components/TasksView';
+import LeadDetail from './components/LeadDetail';
+import { api } from './utils/api';
+
+export default function App() {
+  const [view, setView] = useState('dashboard');
+  const [leads, setLeads] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [leadsData, tasksData, analyticsData] = await Promise.all([
+        api.getLeads(),
+        api.getTasks(),
+        api.getAnalytics(),
+      ]);
+      setLeads(leadsData);
+      setTasks(tasksData);
+      setAnalytics(analyticsData);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleLeadUpdate = useCallback((updatedLead) => {
+    setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+    setSelectedLead(updatedLead);
+  }, []);
+
+  const handleLeadDelete = useCallback((leadId) => {
+    setLeads(prev => prev.filter(l => l.id !== leadId));
+    setSelectedLead(null);
+    loadData(); // refresh analytics
+  }, [loadData]);
+
+  return (
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      <Sidebar
+        view={view}
+        setView={setView}
+        analytics={analytics}
+        onSetup={async () => {
+          try {
+            const result = await api.setup();
+            alert(result.message);
+          } catch (err) {
+            alert('Setup failed: ' + err.message);
+          }
+        }}
+      />
+
+      <main className="flex-1 overflow-y-auto scrollbar-thin">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-slate-500 text-sm">Loading CRM data...</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center max-w-sm">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-red-600 text-xl">!</span>
+              </div>
+              <p className="text-slate-800 font-semibold mb-1">Failed to load data</p>
+              <p className="text-slate-500 text-sm mb-4">{error}</p>
+              <button
+                onClick={loadData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {view === 'dashboard' && (
+              <Dashboard
+                leads={leads}
+                tasks={tasks}
+                analytics={analytics}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+                setView={setView}
+              />
+            )}
+            {view === 'leads' && (
+              <LeadsView
+                leads={leads}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+                onRefresh={loadData}
+              />
+            )}
+            {view === 'tasks' && (
+              <TasksView
+                tasks={tasks}
+                leads={leads}
+                onTaskUpdate={loadData}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+              />
+            )}
+          </>
+        )}
+      </main>
+
+      {selectedLead && (
+        <LeadDetail
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onUpdate={handleLeadUpdate}
+          onDelete={handleLeadDelete}
+          onTasksChange={loadData}
+        />
+      )}
+    </div>
+  );
+}
