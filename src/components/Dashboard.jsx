@@ -66,7 +66,7 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
 
       {/* Priority breakdown */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {['🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3', '🟢 Skip'].map(p => {
+        {['🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3'].map(p => {
           const cfg = getPriorityStyle(p);
           const count = analytics?.byPriority?.[p] || 0;
           return (
