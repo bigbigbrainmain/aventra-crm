@@ -132,15 +132,11 @@ export default function EnterLeadModal({ onClose, onSave }) {
             {field('Industry', 'industry', 'text', true)}
           </div>
 
-          {/* Optional fields */}
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider pt-2">Optional</p>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             {field('Email', 'email', 'email')}
             {field('Website', 'website', 'url')}
           </div>
 
-          {field('Priority Reason', 'priorityReason')}
           {field('Date Pitched', 'datePitched', 'date')}
 
           <div>
@@ -151,30 +147,6 @@ export default function EnterLeadModal({ onClose, onSave }) {
               rows={2}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
-          </div>
-
-          {field('Email Subject', 'subject')}
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Email Body</label>
-            <textarea
-              value={form.emailBody}
-              onChange={e => set('emailBody', e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Calendly Link Sent</label>
-            <select
-              value={form.calendlyLinkSent}
-              onChange={e => set('calendlyLinkSent', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
           </div>
         </form>
 
