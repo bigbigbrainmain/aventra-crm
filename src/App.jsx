@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import LeadsView from './components/LeadsView';
 import TasksView from './components/TasksView';
 import LeadDetail from './components/LeadDetail';
+import EnterLeadModal from './components/EnterLeadModal';
 import { api } from './utils/api';
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [showEnterLead, setShowEnterLead] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -56,6 +58,7 @@ export default function App() {
         view={view}
         setView={setView}
         analytics={analytics}
+        onEnterLead={() => setShowEnterLead(true)}
         onSetup={async () => {
           try {
             const result = await api.setup();
@@ -119,6 +122,16 @@ export default function App() {
           </>
         )}
       </main>
+
+      {showEnterLead && (
+        <EnterLeadModal
+          onClose={() => setShowEnterLead(false)}
+          onSave={async (data) => {
+            await api.createLead(data);
+            await loadData();
+          }}
+        />
+      )}
 
       {selectedLead && (
         <LeadDetail

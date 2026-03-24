@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, CheckSquare, Settings, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, Settings, PlusCircle } from 'lucide-react';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard',  Icon: LayoutDashboard },
@@ -6,7 +6,7 @@ const NAV = [
   { id: 'tasks',     label: 'Tasks',      Icon: CheckSquare      },
 ];
 
-export default function Sidebar({ view, setView, analytics, onSetup }) {
+export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead }) {
   const overdueCount = analytics?.overdueTasksCount || 0;
   const todayCount   = analytics?.todayTasksCount   || 0;
 
@@ -47,6 +47,13 @@ export default function Sidebar({ view, setView, analytics, onSetup }) {
 
       {/* Footer stats */}
       <div className="px-4 pb-3 pt-2 border-t border-slate-700/60 space-y-3">
+        <button
+          onClick={onEnterLead}
+          className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors"
+        >
+          <PlusCircle size={13} />
+          Enter Lead
+        </button>
         {analytics && (
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="bg-slate-800 rounded-lg py-2">
