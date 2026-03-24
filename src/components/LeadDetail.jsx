@@ -234,15 +234,20 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
 
           {/* Metadata */}
           <Section title="Lead Info">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-slate-400 mb-0.5">Date Pitched</p>
-                <p className="text-slate-700">{lead.datePitched || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 mb-0.5">Calendly Sent</p>
-                <p className="text-slate-700">{lead.calendlyLinkSent || 'No'}</p>
-              </div>
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Date Pitched</p>
+              <input
+                type="date"
+                defaultValue={lead.datePitched || ''}
+                onBlur={e => {
+                  if (e.target.value !== (lead.datePitched || '')) {
+                    api.updateLead(lead.id, { datePitched: e.target.value })
+                      .then(() => onUpdate({ ...lead, datePitched: e.target.value }))
+                      .catch(console.error);
+                  }
+                }}
+                className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
             {/* Inline notes field */}
             <div className="mt-3">
