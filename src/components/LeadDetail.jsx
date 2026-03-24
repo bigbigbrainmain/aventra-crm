@@ -242,8 +242,6 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
           {/* Metadata */}
           <Section title="Lead Info">
             <div>
-            {/* Inline notes field */}
-            <div className="mt-3">
               <p className="text-xs text-slate-400 mb-1">Quick Note</p>
               <textarea
                 defaultValue={lead.notes}
