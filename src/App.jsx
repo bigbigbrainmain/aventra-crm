@@ -16,6 +16,22 @@ export default function App() {
   const [showEnterLead, setShowEnterLead] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const handleToggleFavourite = useCallback(async (leadId) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const newValue = !lead.isFavourite;
+    const apply = (val) => {
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, isFavourite: val } : l));
+      setSelectedLead(prev => prev?.id === leadId ? { ...prev, isFavourite: val } : prev);
+    };
+    apply(newValue);
+    try {
+      await api.updateLead(leadId, { isFavourite: newValue });
+    } catch (err) {
+      console.error(err);
+      apply(!newValue);
+    }
+  }, [leads]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -109,6 +125,7 @@ export default function App() {
                 leads={leads}
                 onSelectLead={(lead) => setSelectedLead(lead)}
                 onRefresh={loadData}
+                onToggleFavourite={handleToggleFavourite}
               />
             )}
             {view === 'tasks' && (
@@ -140,6 +157,7 @@ export default function App() {
           onUpdate={handleLeadUpdate}
           onDelete={handleLeadDelete}
           onTasksChange={loadData}
+          onToggleFavourite={handleToggleFavourite}
         />
       )}
     </div>

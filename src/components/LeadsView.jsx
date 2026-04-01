@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Mail, Phone, ExternalLink, ChevronDown, X } from 'lucide-react';
+import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star } from 'lucide-react';
 import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG } from '../utils/constants';
 
 const PRIORITIES = Object.keys(PRIORITY_CONFIG);
@@ -84,19 +84,28 @@ function StatusBadge({ status }) {
   );
 }
 
-function LeadCard({ lead, onClick }) {
+function LeadCard({ lead, onClick, onToggleFavourite }) {
   const p = getPriorityStyle(lead.priority);
   return (
-    <button
+    <div
       onClick={onClick}
-      className="bg-white border border-slate-100 rounded-xl p-4 text-left hover:shadow-md hover:border-blue-200 transition-all"
+      className="bg-white border border-slate-100 rounded-xl p-4 text-left hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
           {p && <span className={`w-2 h-2 rounded-full shrink-0 ${p.dot}`} />}
           <p className="font-semibold text-slate-900 text-sm truncate">{lead.businessName}</p>
         </div>
-        <StatusBadge status={lead.status} />
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFavourite(lead.id); }}
+            title={lead.isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+            className={`p-0.5 rounded transition-colors ${lead.isFavourite ? 'text-amber-400 hover:text-amber-500' : 'text-slate-200 hover:text-amber-300'}`}
+          >
+            <Star size={13} fill={lead.isFavourite ? 'currentColor' : 'none'} />
+          </button>
+          <StatusBadge status={lead.status} />
+        </div>
       </div>
 
       <p className="text-xs text-slate-400 mb-3 truncate">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</p>
@@ -129,16 +138,21 @@ function LeadCard({ lead, onClick }) {
           </span>
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
-export default function LeadsView({ leads, onSelectLead, onRefresh }) {
+export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavourite }) {
+  const [tab, setTab] = useState('all');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [search, setSearch] = useState('');
 
-  const filtered = leads.filter(l => {
+  const favouriteCount = leads.filter(l => l.isFavourite).length;
+
+  const baseList = tab === 'favourites' ? leads.filter(l => l.isFavourite) : leads;
+
+  const filtered = baseList.filter(l => {
     const matchStatus    = selectedStatuses.length === 0   || selectedStatuses.includes(l.status);
     const matchPriority  = selectedPriorities.length === 0 || selectedPriorities.includes(l.priority);
     const q = search.toLowerCase();
@@ -150,15 +164,20 @@ export default function LeadsView({ leads, onSelectLead, onRefresh }) {
     return matchStatus && matchPriority && matchSearch;
   });
 
+  // In "All" tab, sort favourites to top
+  const sorted = tab === 'all'
+    ? [...filtered].sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
+    : filtered;
+
   const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || search;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">All Leads</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Leads</h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            {anyFilter ? `${filtered.length} of ${leads.length} leads` : `${leads.length} total leads`}
+            {anyFilter ? `${sorted.length} of ${baseList.length} leads` : `${baseList.length} ${tab === 'favourites' ? 'favourited' : 'total'} leads`}
           </p>
         </div>
         <button
@@ -166,6 +185,28 @@ export default function LeadsView({ leads, onSelectLead, onRefresh }) {
           className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
         >
           Refresh
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setTab('all')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setTab('favourites')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === 'favourites' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          <Star size={13} fill={tab === 'favourites' ? 'currentColor' : 'none'} className={tab === 'favourites' ? 'text-amber-400' : 'text-slate-400'} />
+          Favourites
+          {favouriteCount > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${tab === 'favourites' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-500'}`}>
+              {favouriteCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -229,14 +270,21 @@ export default function LeadsView({ leads, onSelectLead, onRefresh }) {
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-slate-400 text-sm">No leads match the current filters</p>
+          <p className="text-slate-400 text-sm">
+            {tab === 'favourites' && !anyFilter ? 'No favourites yet — star a lead to pin it here' : 'No leads match the current filters'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(lead => (
-            <LeadCard key={lead.id} lead={lead} onClick={() => onSelectLead(lead)} />
+          {sorted.map(lead => (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              onClick={() => onSelectLead(lead)}
+              onToggleFavourite={onToggleFavourite}
+            />
           ))}
         </div>
       )}

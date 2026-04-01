@@ -23,7 +23,7 @@ function getClient() {
 // A(0)=ID, B(1)=Business Name, C(2)=Industry, D(3)=City, E(4)=Email,
 // F(5)=Phone, G(6)=Website, H(7)=Priority, I(8)=Priority Reason,
 // J(9)=Status, K(10)=Date Pitched, L(11)=Notes, M(12)=Subject,
-// N(13)=Email Body, O(14)=Calendly Link Sent
+// N(13)=Email Body, O(14)=Calendly Link Sent, P(15)=Is Favourite
 function rowToLead(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -41,6 +41,7 @@ function rowToLead(row, rowNum) {
     subject: String(row[12] || ''),
     emailBody: String(row[13] || ''),
     calendlyLinkSent: String(row[14] || 'No'),
+    isFavourite: row[15] === 'TRUE' || row[15] === true,
     _row: rowNum,
   };
 }

@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findLead(leadId) {
-  const rows = await getRange(TABS.LEADS, 'A2:O');
+  const rows = await getRange(TABS.LEADS, 'A2:P');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === leadId) {
       return { lead: rowToLead(rows[i], i + 2), rowNum: i + 2 };
@@ -52,6 +52,7 @@ exports.handler = async (event) => {
         updated.subject,
         updated.emailBody,
         updated.calendlyLinkSent,
+        updated.isFavourite ? 'TRUE' : 'FALSE',
       ];
       await updateRow(TABS.LEADS, result.rowNum, row);
       // Return without _row

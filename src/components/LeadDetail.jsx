@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  X, Mail, Phone, ExternalLink, MapPin, Tag, Calendar,
+  X, Mail, Phone, ExternalLink, Tag, Calendar,
   Plus, Check, Trash2, AlertCircle, ChevronDown,
+  Star, Pencil,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
@@ -34,7 +35,7 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange }) {
+export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite }) {
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -44,6 +45,8 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [addingTask, setAddingTask] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [contactDraft, setContactDraft] = useState({});
 
   const loadNotesAndTasks = useCallback(async () => {
     const [n, t] = await Promise.all([
@@ -75,6 +78,24 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     onUpdate({ ...lead, notes: value }); // optimistic
     try {
       await api.updateLead(lead.id, { notes: value });
+    } catch (err) {
+      console.error(err);
+      onUpdate(lead);
+    }
+  };
+
+  // Edit contact info
+  const startEditContact = () => {
+    setContactDraft({ email: lead.email, phone: lead.phone, website: lead.website });
+    setEditingContact(true);
+  };
+
+  const saveContact = async () => {
+    const updated = { ...lead, ...contactDraft };
+    onUpdate(updated);
+    setEditingContact(false);
+    try {
+      await api.updateLead(lead.id, contactDraft);
     } catch (err) {
       console.error(err);
       onUpdate(lead);
@@ -200,41 +221,129 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
               )}
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors shrink-0">
-            <X size={18} className="text-slate-500" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => onToggleFavourite(lead.id)}
+              title={lead.isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+              className={`p-1.5 rounded-lg transition-colors ${lead.isFavourite ? 'text-amber-400 hover:bg-amber-50' : 'text-slate-300 hover:text-amber-400 hover:bg-slate-100'}`}
+            >
+              <Star size={17} fill={lead.isFavourite ? 'currentColor' : 'none'} />
+            </button>
+            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+              <X size={18} className="text-slate-500" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-4">
           {/* Contact info */}
-          <div className="space-y-2">
-            {lead.email && (
-              <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-slate-700 hover:text-blue-600 transition-colors">
-                <Mail size={14} className="text-slate-400 shrink-0" />
-                <span>{lead.email}</span>
-              </a>
-            )}
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-slate-700 hover:text-blue-600 transition-colors">
-                <Phone size={14} className="text-slate-400 shrink-0" />
-                <span>{lead.phone}</span>
-              </a>
-            )}
-            {lead.website && (
-              <a href={lead.website} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 text-sm text-blue-600 hover:text-blue-700 transition-colors">
-                <ExternalLink size={14} className="text-slate-400 shrink-0" />
-                <span className="truncate">{lead.website}</span>
-              </a>
-            )}
-            <div className="flex items-center gap-2.5 text-sm text-slate-500">
-              <Tag size={14} className="text-slate-400 shrink-0" />
-              <span>{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</span>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</span>
+              {!editingContact && (
+                <button
+                  onClick={startEditContact}
+                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
+                >
+                  <Pencil size={11} />
+                  Edit
+                </button>
+              )}
             </div>
-            {lead.priorityReason && (
-              <div className="flex items-start gap-2.5 text-sm text-slate-500">
-                <AlertCircle size={14} className="text-slate-400 shrink-0 mt-0.5" />
-                <span className="text-xs">{lead.priorityReason}</span>
+
+            {editingContact ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Mail size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    type="email"
+                    value={contactDraft.email}
+                    onChange={e => setContactDraft(d => ({ ...d, email: e.target.value }))}
+                    placeholder="Email"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    type="tel"
+                    value={contactDraft.phone}
+                    onChange={e => setContactDraft(d => ({ ...d, phone: e.target.value }))}
+                    placeholder="Phone"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <ExternalLink size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    type="url"
+                    value={contactDraft.website}
+                    onChange={e => setContactDraft(d => ({ ...d, website: e.target.value }))}
+                    placeholder="Website URL"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={saveContact}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingContact(false)}
+                    className="px-3 py-1.5 text-slate-500 text-xs font-medium rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {lead.email ? (
+                  <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-sm text-slate-700 hover:text-blue-600 transition-colors">
+                    <Mail size={14} className="text-slate-400 shrink-0" />
+                    <span>{lead.email}</span>
+                  </a>
+                ) : (
+                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                    <Mail size={14} className="shrink-0" />
+                    <span>Add email</span>
+                  </button>
+                )}
+                {lead.phone ? (
+                  <a href={`tel:${lead.phone}`} className="flex items-center gap-2.5 text-sm text-slate-700 hover:text-blue-600 transition-colors">
+                    <Phone size={14} className="text-slate-400 shrink-0" />
+                    <span>{lead.phone}</span>
+                  </a>
+                ) : (
+                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                    <Phone size={14} className="shrink-0" />
+                    <span>Add phone</span>
+                  </button>
+                )}
+                {lead.website ? (
+                  <a href={lead.website} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 text-sm text-blue-600 hover:text-blue-700 transition-colors">
+                    <ExternalLink size={14} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{lead.website}</span>
+                  </a>
+                ) : (
+                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                    <ExternalLink size={14} className="shrink-0" />
+                    <span>Add website</span>
+                  </button>
+                )}
+                <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                  <Tag size={14} className="text-slate-400 shrink-0" />
+                  <span>{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</span>
+                </div>
+                {lead.priorityReason && (
+                  <div className="flex items-start gap-2.5 text-sm text-slate-500">
+                    <AlertCircle size={14} className="text-slate-400 shrink-0 mt-0.5" />
+                    <span className="text-xs">{lead.priorityReason}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
