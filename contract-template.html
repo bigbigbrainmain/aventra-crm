@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Design Agreement — Aventra</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 14px;
+      line-height: 1.75;
+      color: #1a1a1a;
+      background: #f4f4f0;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 64px 72px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+      border-top: 5px solid #1a1a2e;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-family: 'Arial', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #1a1a2e;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .doc-meta strong {
+      display: block;
+      font-size: 13px;
+      color: #1a1a2e;
+    }
+
+    /* Title block */
+    .title-block {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .title-block h1 {
+      font-family: 'Arial', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+
+    .title-block .subtitle {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+    }
+
+    /* Parties box */
+    .parties-box {
+      background: #f8f8f6;
+      border: 1px solid #e0e0da;
+      border-left: 4px solid #1a1a2e;
+      padding: 24px 28px;
+      margin-bottom: 32px;
+      border-radius: 2px;
+    }
+
+    .parties-box h2 {
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    .party-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .party {
+      font-size: 13px;
+    }
+
+    .party-label {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 4px;
+    }
+
+    .party-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a1a2e;
+      margin-bottom: 2px;
+    }
+
+    .party-detail {
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* Summary table */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+      font-size: 13px;
+    }
+
+    .summary-table th {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #999;
+      text-align: left;
+      padding: 8px 12px;
+      background: #f8f8f6;
+      border: 1px solid #e0e0da;
+    }
+
+    .summary-table td {
+      padding: 10px 12px;
+      border: 1px solid #e0e0da;
+      vertical-align: top;
+    }
+
+    .summary-table tr:nth-child(even) td {
+      background: #fafaf8;
+    }
+
+    .fee-highlight {
+      font-weight: 700;
+      color: #1a1a2e;
+      font-size: 15px;
+    }
+
+    /* Opening recital */
+    .recital {
+      background: #fafaf8;
+      border: 1px solid #e8e8e2;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      font-size: 13px;
+      color: #444;
+      border-radius: 2px;
+    }
+
+    /* Clauses */
+    .clauses {
+      counter-reset: clause;
+    }
+
+    .section-heading {
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #1a1a2e;
+      margin-top: 32px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e0e0da;
+    }
+
+    .clause {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 13.5px;
+      color: #2c2c2c;
+    }
+
+    .clause-num {
+      font-family: 'Arial', sans-serif;
+      font-weight: 700;
+      color: #999;
+      font-size: 12px;
+      padding-top: 2px;
+      text-align: right;
+    }
+
+    .clause-text ul {
+      margin-top: 8px;
+      padding-left: 20px;
+    }
+
+    .clause-text ul li {
+      margin-bottom: 6px;
+    }
+
+    .clause-sub-heading {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 8px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    .clause-sub-heading .clause-text {
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #444;
+      text-decoration: underline;
+    }
+
+    /* Signature block */
+    .signature-section {
+      margin-top: 52px;
+      padding-top: 32px;
+      border-top: 1px solid #ddd;
+    }
+
+    .signature-section h2 {
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .sig-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 8px;
+    }
+
+    .sig-block {
+      font-size: 12px;
+    }
+
+    .sig-party {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 48px;
+    }
+
+    .sig-line {
+      border-top: 1px solid #333;
+      margin-bottom: 6px;
+    }
+
+    .sig-label {
+      color: #666;
+      font-size: 11px;
+    }
+
+    .sig-name {
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 2px;
+      color: #1a1a2e;
+    }
+
+    .sig-date-line {
+      margin-top: 20px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+      text-align: center;
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      color: #bbb;
+      letter-spacing: 0.5px;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { box-shadow: none; padding: 48px 56px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-name">Aventra</div>
+        <div class="brand-sub">Web Design &amp; Development</div>
+      </div>
+      <div class="doc-meta">
+        <strong>Web Design Agreement</strong>
+        Date: {{CONTRACT_DATE}}<br>
+        Ref: {{CONTRACT_REF}}
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="title-block">
+      <h1>Web Design &amp; Hosting Agreement</h1>
+      <p class="subtitle">This agreement is entered into as of {{CONTRACT_DATE}}</p>
+    </div>
+
+    <!-- Parties -->
+    <div class="parties-box">
+      <h2>Parties to this Agreement</h2>
+      <div class="party-row">
+        <div class="party">
+          <div class="party-label">Client</div>
+          <div class="party-name">{{CLIENT_NAME}}</div>
+          <div class="party-detail">
+            {{CLIENT_BUSINESS}}<br>
+            {{CLIENT_ADDRESS}}
+          </div>
+        </div>
+        <div class="party">
+          <div class="party-label">Contractor</div>
+          <div class="party-name">Aventra</div>
+          <div class="party-detail">
+            AventraSites TA / DemandHub UK<br>
+            St Mary's House, Netherhampton,<br>
+            Salisbury, Wiltshire, SP2 8PU
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary table -->
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>One-off Setup Fee</th>
+          <th>Monthly Retainer</th>
+          <th>Updates Included</th>
+          <th>Domain Hosting</th>
+          <th>Payment Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{SERVICES_SUMMARY}}</td>
+          <td><span class="fee-highlight">{{ONE_OFF_FEE}}</span></td>
+          <td><span class="fee-highlight">{{MONTHLY_FEE}}</span></td>
+          <td>{{UPDATES_PER_MONTH}} per month</td>
+          <td>{{DOMAIN_HOSTING_INCLUDED}}<br><small style="color:#888;">{{DOMAIN_FEE}}</small></td>
+          <td>Within 30 days of invoice</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Opening recital -->
+    <div class="recital">
+      <strong>IN CONSIDERATION OF</strong> the matters described above and of the mutual benefits and obligations set forth in this Agreement, the receipt and sufficiency of which consideration is hereby acknowledged, the Client and the Contractor (individually the "Party" and collectively the "Parties" to this Agreement) agree as follows:
+    </div>
+
+    <!-- Clauses -->
+    <div class="clauses">
+
+      <div class="section-heading">1. Services Provided</div>
+
+      <div class="clause">
+        <div class="clause-num">1.</div>
+        <div class="clause-text">The Client hereby agrees to engage the Contractor to provide the Client with the following services (the "Services"):
+          <ul>
+            <li>{{SERVICES_DETAIL}}</li>
+            <li>Ongoing website hosting and maintenance, including up to {{UPDATES_PER_MONTH}} content update(s) per calendar month.</li>
+            <li>Domain registration and management: {{DOMAIN_HOSTING_INCLUDED}}.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">2.</div>
+        <div class="clause-text">The Services will also include any other tasks which the Parties may agree on. The Contractor hereby agrees to provide such Services to the Client.</div>
+      </div>
+
+      <div class="section-heading">2. Term of Agreement</div>
+
+      <div class="clause">
+        <div class="clause-num">3.</div>
+        <div class="clause-text">The term of this Agreement (the "Term") will begin on the date of this Agreement and will remain in full force and effect indefinitely until terminated as provided in this Agreement.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">4.</div>
+        <div class="clause-text">In the event that either Party wishes to terminate this Agreement, that Party will be required to provide 14 days' written notice to the other Party.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">5.</div>
+        <div class="clause-text">In the event that either Party breaches a material provision under this Agreement, the non-defaulting Party may terminate this Agreement immediately and require the defaulting Party to indemnify the non-defaulting Party against all reasonable damages.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">6.</div>
+        <div class="clause-text">This Agreement may be terminated at any time by mutual agreement of the Parties.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">7.</div>
+        <div class="clause-text">Except as otherwise provided in this Agreement, the obligations of the Contractor will end upon the termination of this Agreement.</div>
+      </div>
+
+      <div class="section-heading">3. Performance</div>
+
+      <div class="clause">
+        <div class="clause-num">8.</div>
+        <div class="clause-text">The Parties agree to do everything necessary to ensure that the terms of this Agreement take effect.</div>
+      </div>
+
+      <div class="section-heading">4. Currency &amp; Payment</div>
+
+      <div class="clause">
+        <div class="clause-num">9.</div>
+        <div class="clause-text">Except as otherwise provided in this Agreement, all monetary amounts referred to in this Agreement are in GBP (£).</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">10.</div>
+        <div class="clause-text">The Contractor will charge the Client for the Services as follows (the "Payment"):
+          <ul>
+            <li><strong>One-off setup fee:</strong> {{ONE_OFF_FEE}}, payable upon signing of this Agreement.</li>
+            <li><strong>Monthly retainer:</strong> {{MONTHLY_FEE}} per month, covering hosting, maintenance, and up to <strong>{{UPDATES_PER_MONTH}} content update(s)</strong> per calendar month.</li>
+            <li><strong>Domain &amp; hosting:</strong> {{DOMAIN_HOSTING_INCLUDED}}. {{DOMAIN_FEE_CLAUSE}}</li>
+          </ul>
+          Additional updates or work beyond the included allowance will be quoted and agreed in writing before commencement.
+        </div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">11.</div>
+        <div class="clause-text">Invoices submitted by the Contractor to the Client are due within 30 days of receipt.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">12.</div>
+        <div class="clause-text">The Contractor will be responsible for all income tax liabilities and National Insurance or similar contributions relating to the Payment and the Contractor will indemnify the Client in respect of any such payments required to be made by the Client.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">13.</div>
+        <div class="clause-text">The Contractor will be solely responsible for the payment of all remuneration and benefits due to the employees of the Contractor, including any National Insurance, income tax and any other form of taxation or social security costs.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">14.</div>
+        <div class="clause-text">The Contractor will not be reimbursed for any expenses incurred in connection with providing the Services of this Agreement.</div>
+      </div>
+
+      <div class="section-heading">5. Confidentiality</div>
+
+      <div class="clause">
+        <div class="clause-num">15.</div>
+        <div class="clause-text">Confidential information (the "Confidential Information") refers to any data or information relating to the business of the Client which would reasonably be considered to be proprietary to the Client including, but not limited to, accounting records, business processes, and client records and that is not generally known in the industry of the Client and where the release of that Confidential Information could reasonably be expected to cause harm to the Client.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">16.</div>
+        <div class="clause-text">The Contractor agrees that they will not disclose, divulge, reveal, report or use, for any purpose, any Confidential Information which the Contractor has obtained, except as authorised by the Client or as required by law. The obligations of confidentiality will apply during the Term and will end on the termination of this Agreement except in the case of any Confidential Information which is a trade secret, in which case those obligations will last indefinitely.</div>
+      </div>
+
+      <div class="section-heading">6. Intellectual Property</div>
+
+      <div class="clause">
+        <div class="clause-num">17.</div>
+        <div class="clause-text">All intellectual property and related material, including any trade secrets, moral rights, goodwill, relevant registrations or applications for registration, and rights in any patent, copyright, trade mark, trade dress, industrial design and trade name (the "Intellectual Property") that is developed or produced under this Agreement, will be the sole property of the Client. The use of the Intellectual Property by the Client will not be restricted in any manner.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">18.</div>
+        <div class="clause-text">The Contractor may not use the Intellectual Property for any purpose other than that contracted for in this Agreement except with the written consent of the Client. The Contractor will be responsible for any and all damages resulting from the unauthorised use of the Intellectual Property.</div>
+      </div>
+
+      <div class="section-heading">7. Return of Property</div>
+
+      <div class="clause">
+        <div class="clause-num">19.</div>
+        <div class="clause-text">Upon the expiry or termination of this Agreement, the Contractor will return to the Client any property, documentation, records, or Confidential Information which is the property of the Client.</div>
+      </div>
+
+      <div class="section-heading">8. Independent Contractor</div>
+
+      <div class="clause">
+        <div class="clause-num">20.</div>
+        <div class="clause-text">In providing the Services under this Agreement it is expressly agreed that the Contractor is acting as an independent contractor and not as an employee. The Contractor and the Client acknowledge that this Agreement does not create a partnership or joint venture between them, and is exclusively a contract for service.</div>
+      </div>
+
+      <div class="clause-sub-heading">
+        <div class="clause-num"></div>
+        <div class="clause-text">Right of Substitution</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">21.</div>
+        <div class="clause-text">Except as otherwise provided in this Agreement, the Contractor may, at the Contractor's absolute discretion, engage a third party sub-contractor to perform some or all of the obligations of the Contractor under this Agreement and the Client will not hire or engage any third parties to assist with the provision of the Services.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">22.</div>
+        <div class="clause-text">In the event that the Contractor hires a sub-contractor:
+          <ul>
+            <li>the Contractor will pay the sub-contractor for its services and the Compensation will remain payable by the Client to the Contractor.</li>
+            <li>for the purposes of the indemnification clause of this Agreement, the sub-contractor is an agent of the Contractor.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="clause-sub-heading">
+        <div class="clause-num"></div>
+        <div class="clause-text">Autonomy</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">23.</div>
+        <div class="clause-text">Except as otherwise provided in this Agreement, the Contractor will have full control over working time, methods, and decision making in relation to provision of the Services in accordance with the Agreement. The Contractor will work autonomously and not at the direction of the Client. However, the Contractor will be responsive to the reasonable needs and concerns of the Client.</div>
+      </div>
+
+      <div class="clause-sub-heading">
+        <div class="clause-num"></div>
+        <div class="clause-text">Equipment</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">24.</div>
+        <div class="clause-text">Except as otherwise provided in this Agreement, the Contractor will provide at the Contractor's own expense, any and all tools, machinery, equipment, raw materials, supplies, workwear and any other items or parts necessary to deliver the Services in accordance with the Agreement.</div>
+      </div>
+
+      <div class="clause-sub-heading">
+        <div class="clause-num"></div>
+        <div class="clause-text">No Exclusivity</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">25.</div>
+        <div class="clause-text">The Parties acknowledge that this Agreement is non-exclusive and that either Party will be free, during and after the Term, to engage or contract with third parties for the provision of services similar to the Services.</div>
+      </div>
+
+      <div class="section-heading">9. Notices</div>
+
+      <div class="clause">
+        <div class="clause-num">26.</div>
+        <div class="clause-text">All notices, requests, demands or other communications required or permitted by the terms of this Agreement will be given in writing and delivered to the Parties at the following addresses:
+          <ul>
+            <li><strong>Client:</strong> {{CLIENT_NAME}}, {{CLIENT_ADDRESS}}</li>
+            <li><strong>Contractor:</strong> AventraSites TA / DemandHub UK, St Mary's House, Netherhampton, Salisbury, Wiltshire, SP2 8PU</li>
+          </ul>
+          or to such other address as either Party may from time to time notify the other.
+        </div>
+      </div>
+
+      <div class="section-heading">10. Indemnification</div>
+
+      <div class="clause">
+        <div class="clause-num">27.</div>
+        <div class="clause-text">Except to the extent paid in settlement from any applicable insurance policies, and to the extent permitted by applicable law, each Party agrees to indemnify and hold harmless the other Party, and its respective directors, shareholders, affiliates, officers, agents, employees, and permitted successors and assigns against any and all claims, losses, damages, liabilities, penalties, punitive damages, expenses, reasonable legal fees and costs of any kind or amount whatsoever, which result from or arise out of any act or omission of the indemnifying party, its respective directors, shareholders, affiliates, officers, agents, employees, and permitted successors and assigns that occurs in connection with this Agreement. This indemnification will survive the termination of this Agreement.</div>
+      </div>
+
+      <div class="section-heading">11. General Provisions</div>
+
+      <div class="clause">
+        <div class="clause-num">28.</div>
+        <div class="clause-text"><strong>Modification.</strong> Any amendment or modification of this Agreement or additional obligation assumed by either Party in connection with this Agreement will only be binding if evidenced in writing signed by each Party or an authorised representative of each Party.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">29.</div>
+        <div class="clause-text"><strong>Time of the Essence.</strong> Time is of the essence in this Agreement. No extension or variation of this Agreement will operate as a waiver of this provision.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">30.</div>
+        <div class="clause-text"><strong>Assignment.</strong> The Contractor will not voluntarily, or by operation of law, assign or otherwise transfer its obligations under this Agreement without the prior written consent of the Client.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">31.</div>
+        <div class="clause-text"><strong>Entire Agreement.</strong> It is agreed that there is no representation, warranty, collateral agreement or condition affecting this Agreement except as expressly provided in this Agreement.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">32.</div>
+        <div class="clause-text"><strong>Enurement.</strong> This Agreement will enure to the benefit of and be binding on the Parties and their respective heirs, executors, administrators and permitted successors and assigns.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">33.</div>
+        <div class="clause-text"><strong>Headings.</strong> Headings are inserted for the convenience of the Parties only and are not to be considered when interpreting this Agreement.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">34.</div>
+        <div class="clause-text"><strong>Gender.</strong> Words in the singular mean and include the plural and vice versa. Words in the masculine mean and include the feminine and vice versa.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">35.</div>
+        <div class="clause-text"><strong>Governing Law.</strong> This Agreement will be governed by and construed in accordance with the laws of England and Wales.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">36.</div>
+        <div class="clause-text"><strong>Severability.</strong> In the event that any of the provisions of this Agreement are held to be invalid or unenforceable in whole or in part, all other provisions will nevertheless continue to be valid and enforceable with the invalid or unenforceable parts severed from the remainder of this Agreement.</div>
+      </div>
+
+      <div class="clause">
+        <div class="clause-num">37.</div>
+        <div class="clause-text"><strong>Waiver.</strong> The waiver by either Party of a breach, default, delay or omission of any of the provisions of this Agreement by the other Party will not be construed as a waiver of any subsequent breach of the same or other provisions.</div>
+      </div>
+
+    </div>
+
+    <!-- Signatures -->
+    <div class="signature-section">
+      <h2>Signatures</h2>
+      <div class="sig-row">
+        <div class="sig-block">
+          <div class="sig-party">Client</div>
+          <div class="sig-line"></div>
+          <div class="sig-label">Signature</div>
+          <div class="sig-name">{{CLIENT_NAME}}</div>
+          <div class="sig-date-line">
+            <div class="sig-line"></div>
+            <div class="sig-label">Date</div>
+          </div>
+        </div>
+        <div class="sig-block">
+          <div class="sig-party">Contractor — Aventra</div>
+          <div class="sig-line"></div>
+          <div class="sig-label">Signature</div>
+          <div class="sig-name">Joe Clacher</div>
+          <div class="sig-date-line">
+            <div class="sig-line"></div>
+            <div class="sig-label">Date</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Aventra &mdash; Web Design &amp; Development &mdash; AventraSites TA / DemandHub UK &mdash; {{CONTRACT_REF}}
+    </div>
+
+  </div>
+</body>
+</html>

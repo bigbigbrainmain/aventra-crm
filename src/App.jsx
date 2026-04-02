@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import LeadsView from './components/LeadsView';
 import TasksView from './components/TasksView';
+import ContractsView from './components/ContractsView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import { api } from './utils/api';
@@ -136,6 +137,7 @@ export default function App() {
                 onSelectLead={(lead) => setSelectedLead(lead)}
               />
             )}
+            {view === 'contracts' && <ContractsView />}
           </>
         )}
       </main>
