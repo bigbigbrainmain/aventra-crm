@@ -5,7 +5,7 @@ import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG } from '../
 const PRIORITIES = Object.keys(PRIORITY_CONFIG);
 
 // Multi-select dropdown component
-function MultiSelect({ label, options, selected, onChange, renderOption }) {
+function MultiSelect({ label, options, selected, onChange, renderOption, activeClassName }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -27,7 +27,7 @@ function MultiSelect({ label, options, selected, onChange, renderOption }) {
         onClick={() => setOpen(v => !v)}
         className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap
           ${isActive
-            ? 'bg-blue-600 text-white border-blue-600'
+            ? (activeClassName || 'bg-blue-600 text-white border-blue-600')
             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           }`}
       >
@@ -147,6 +147,15 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [search, setSearch] = useState('');
+  const [hiddenStatuses, setHiddenStatuses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '[]'); }
+    catch { return []; }
+  });
+
+  const updateHiddenStatuses = (val) => {
+    setHiddenStatuses(val);
+    localStorage.setItem('crm_hiddenStatuses', JSON.stringify(val));
+  };
 
   const favouriteCount = leads.filter(l => l.isFavourite).length;
 
@@ -154,6 +163,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
 
   const filtered = baseList.filter(l => {
     const matchStatus    = selectedStatuses.length === 0   || selectedStatuses.includes(l.status);
+    const matchNotHidden = !hiddenStatuses.includes(l.status);
     const matchPriority  = selectedPriorities.length === 0 || selectedPriorities.includes(l.priority);
     const q = search.toLowerCase();
     const matchSearch    = !q ||
@@ -161,7 +171,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
       l.industry.toLowerCase().includes(q) ||
       l.city.toLowerCase().includes(q) ||
       l.email.toLowerCase().includes(q);
-    return matchStatus && matchPriority && matchSearch;
+    return matchStatus && matchNotHidden && matchPriority && matchSearch;
   });
 
   // In "All" tab, sort favourites to top
@@ -169,7 +179,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
     ? [...filtered].sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
     : filtered;
 
-  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || search;
+  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || hiddenStatuses.length > 0 || search;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -241,6 +251,24 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
           }}
         />
 
+        {/* Hide statuses */}
+        <MultiSelect
+          label="Hide"
+          options={STATUSES}
+          selected={hiddenStatuses}
+          onChange={updateHiddenStatuses}
+          activeClassName="bg-slate-700 text-white border-slate-700"
+          renderOption={(opt) => {
+            const s = getStatusStyle(opt);
+            return (
+              <span className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                {opt}
+              </span>
+            );
+          }}
+        />
+
         {/* Priority filter */}
         <MultiSelect
           label="Priority"
@@ -261,7 +289,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
         {/* Clear all */}
         {anyFilter && (
           <button
-            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); setSearch(''); }}
+            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); updateHiddenStatuses([]); setSearch(''); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Clear all
