@@ -148,7 +148,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [search, setSearch] = useState('');
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '[]'); }
+    try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
     catch { return []; }
   });
 
