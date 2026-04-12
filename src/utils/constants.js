@@ -7,6 +7,7 @@ export const STATUSES = [
   'Qualified Out',
   'Closed Won',
   'NRTB',
+  'Incorrect Product Fit',
 ];
 
 export const STATUS_CONFIG = {
@@ -17,7 +18,8 @@ export const STATUS_CONFIG = {
   'Lost':          { bg: 'bg-red-100',    text: 'text-red-600',    dot: 'bg-red-400'    },
   'Qualified Out': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
   'Closed Won':    { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
-  'NRTB':          { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
+  'NRTB':                  { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
+  'Incorrect Product Fit': { bg: 'bg-rose-100',   text: 'text-rose-700',  dot: 'bg-rose-500'   },
 };
 
 export const PRIORITY_CONFIG = {
