@@ -6,7 +6,7 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Design Agreement — Aventra</title>
+  <title>Web Design Agreement — Aventra Sites Ltd</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -77,7 +77,7 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="brand-name">Aventra</div>
+        <div class="brand-name">Aventra Sites Ltd</div>
         <div class="brand-sub">Web Design &amp; Development</div>
       </div>
       <div class="doc-meta">
@@ -100,8 +100,8 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
         </div>
         <div class="party">
           <div class="party-label">Contractor</div>
-          <div class="party-name">Aventra</div>
-          <div class="party-detail">AventraSites TA / DemandHub UK<br>St Mary's House, Netherhampton,<br>Salisbury, Wiltshire, SP2 8PU</div>
+          <div class="party-name">Aventra Sites Ltd</div>
+          <div class="party-detail">Aventra Sites Ltd<br>St Mary's House, Netherhampton,<br>Salisbury, Wiltshire, SP2 8PU</div>
         </div>
       </div>
     </div>
@@ -123,7 +123,7 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
           <td><span class="fee-highlight">{{MONTHLY_FEE}}</span></td>
           <td>{{UPDATES_PER_MONTH}} per month</td>
           <td>{{DOMAIN_HOSTING_INCLUDED}}<br><small style="color:#888;">{{DOMAIN_FEE}}</small></td>
-          <td>Within 30 days of invoice</td>
+          <td>1st of each month (Direct Debit)</td>
         </tr>
       </tbody>
     </table>
@@ -132,23 +132,24 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
     </div>
     <div class="clauses">
       <div class="section-heading">1. Services Provided</div>
-      <div class="clause"><div class="clause-num">1.</div><div class="clause-text">The Client hereby agrees to engage the Contractor to provide the Client with the following services (the "Services"):<ul><li>{{SERVICES_DETAIL}}</li><li>Ongoing website hosting and maintenance, including up to {{UPDATES_PER_MONTH}} content update(s) per calendar month.</li><li>Domain registration and management: {{DOMAIN_HOSTING_INCLUDED}}.</li></ul></div></div>
+      <div class="clause"><div class="clause-num">1.</div><div class="clause-text">The Client hereby agrees to engage the Contractor to provide the Client with the following services (the "Services"):<ul><li>{{SERVICES_DETAIL}}</li><li>Design and build of a website comprising up to 5 pages within a single site build.</li><li>Ongoing website hosting and maintenance, including up to {{UPDATES_PER_MONTH}} content update(s) per calendar month.</li><li>Domain registration and management: {{DOMAIN_HOSTING_INCLUDED}}.</li></ul></div></div>
       <div class="clause"><div class="clause-num">2.</div><div class="clause-text">The Services will also include any other tasks which the Parties may agree on. The Contractor hereby agrees to provide such Services to the Client.</div></div>
       <div class="section-heading">2. Term of Agreement</div>
-      <div class="clause"><div class="clause-num">3.</div><div class="clause-text">The term of this Agreement (the "Term") will begin on the date of this Agreement and will remain in full force and effect indefinitely until terminated as provided in this Agreement.</div></div>
-      <div class="clause"><div class="clause-num">4.</div><div class="clause-text">In the event that either Party wishes to terminate this Agreement, that Party will be required to provide 14 days' written notice to the other Party.</div></div>
+      <div class="clause"><div class="clause-num">3.</div><div class="clause-text">The term of this Agreement (the "Term") will begin on the date of this Agreement. The website hosting and maintenance services provided under this Agreement are subject to an initial minimum term of <strong>12 months</strong> from the date the website goes live (the "Initial Term"). Following the expiry of the Initial Term, the hosting and maintenance services will continue automatically on a rolling monthly basis until terminated in accordance with this Agreement.</div></div>
+      <div class="clause"><div class="clause-num">4.</div><div class="clause-text">Following the expiry of the Initial Term, either Party may terminate the hosting and maintenance services by providing no less than <strong>30 days' written notice</strong> to the other Party. The Client acknowledges that all monthly retainer fees remain payable for the full duration of the Initial Term, regardless of any notice given prior to its expiry.</div></div>
       <div class="clause"><div class="clause-num">5.</div><div class="clause-text">In the event that either Party breaches a material provision under this Agreement, the non-defaulting Party may terminate this Agreement immediately and require the defaulting Party to indemnify the non-defaulting Party against all reasonable damages.</div></div>
       <div class="clause"><div class="clause-num">6.</div><div class="clause-text">This Agreement may be terminated at any time by mutual agreement of the Parties.</div></div>
       <div class="clause"><div class="clause-num">7.</div><div class="clause-text">Except as otherwise provided in this Agreement, the obligations of the Contractor will end upon the termination of this Agreement.</div></div>
       <div class="section-heading">3. Performance</div>
       <div class="clause"><div class="clause-num">8.</div><div class="clause-text">The Parties agree to do everything necessary to ensure that the terms of this Agreement take effect.</div></div>
       <div class="section-heading">4. Currency &amp; Payment</div>
-      <div class="clause"><div class="clause-num">9.</div><div class="clause-text">Except as otherwise provided in this Agreement, all monetary amounts referred to in this Agreement are in GBP (&pound;).</div></div>
-      <div class="clause"><div class="clause-num">10.</div><div class="clause-text">The Contractor will charge the Client for the Services as follows (the "Payment"):<ul><li><strong>One-off setup fee:</strong> {{ONE_OFF_FEE}}, payable upon signing of this Agreement.</li><li><strong>Monthly retainer:</strong> {{MONTHLY_FEE}} per month, covering hosting, maintenance, and up to <strong>{{UPDATES_PER_MONTH}} content update(s)</strong> per calendar month.</li><li><strong>Domain &amp; hosting:</strong> {{DOMAIN_HOSTING_INCLUDED}}. {{DOMAIN_FEE_CLAUSE}}</li></ul>Additional updates or work beyond the included allowance will be quoted and agreed in writing before commencement.</div></div>
-      <div class="clause"><div class="clause-num">11.</div><div class="clause-text">Invoices submitted by the Contractor to the Client are due within 30 days of receipt.</div></div>
-      <div class="clause"><div class="clause-num">12.</div><div class="clause-text">The Contractor will be responsible for all income tax liabilities and National Insurance or similar contributions relating to the Payment and the Contractor will indemnify the Client in respect of any such payments required to be made by the Client.</div></div>
-      <div class="clause"><div class="clause-num">13.</div><div class="clause-text">The Contractor will be solely responsible for the payment of all remuneration and benefits due to the employees of the Contractor, including any National Insurance, income tax and any other form of taxation or social security costs.</div></div>
-      <div class="clause"><div class="clause-num">14.</div><div class="clause-text">The Contractor will not be reimbursed for any expenses incurred in connection with providing the Services of this Agreement.</div></div>
+      <div class="clause"><div class="clause-num">9.</div><div class="clause-text">Except as otherwise provided in this Agreement, all monetary amounts referred to in this Agreement are in GBP (£) and are exclusive of Value Added Tax (VAT). Aventra Sites Ltd is not currently VAT registered. Should the Contractor become VAT registered, or be required by HMRC to charge VAT at any time, the Contractor reserves the right to add VAT to all applicable invoices at the prevailing rate. The Contractor will provide the Client with no less than <strong>30 days' written notice</strong> before VAT is applied to any invoices.</div></div>
+      <div class="clause"><div class="clause-num">10.</div><div class="clause-text">The Contractor operates the following project and payment process:<ul><li><strong>Step 1 — Discovery &amp; First Example (Free):</strong> The Contractor will conduct an initial discovery call and provide a first example website to the Client at no charge and with no obligation.</li><li><strong>Step 2 — Agreement &amp; Deposit:</strong> If the Client wishes to proceed, the Client must first sign this Agreement and then pay a deposit of 50% of the one-off setup fee ({{ONE_OFF_FEE}}) before any further development work commences. The Agreement must be signed prior to the deposit being paid and any work beginning.</li><li><strong>Step 3 — Revisions:</strong> Following receipt of the signed Agreement and deposit, the Client is entitled to two (2) rounds of revisions to the website. Each round of revisions must be submitted as a single, consolidated list of requested changes. The Contractor is not obligated to act on feedback submitted incrementally or outside of these designated revision rounds. Any additional revision rounds will be quoted and agreed separately in writing before commencement.</li><li><strong>Step 4 — Completion &amp; Final Payment:</strong> Upon completion of the website, the Client must provide written sign-off confirming acceptance of the finished site. The remaining 50% of the one-off setup fee then becomes due and payable immediately upon sign-off.</li><li><strong>Step 5 — Go Live:</strong> The website will be made live and hosting will commence only upon receipt of the final payment in full. The 12-month Initial Term for hosting and maintenance begins from the date the website goes live.</li><li><strong>Monthly Retainer:</strong> {{MONTHLY_FEE}} per month, covering hosting, maintenance, and up to <strong>{{UPDATES_PER_MONTH}} content update(s)</strong> per calendar month, payable by Direct Debit on the 1st of each month.</li><li><strong>Domain &amp; Hosting:</strong> {{DOMAIN_HOSTING_INCLUDED}}. {{DOMAIN_FEE_CLAUSE}}</li><li><strong>Project Abandonment:</strong> If the Client fails to respond to communications, provide required feedback, or make any scheduled payment within 30 days of being contacted, the project will be deemed abandoned. Any deposit paid shall be forfeited and retained by the Contractor as reasonable compensation for work already completed, and the Contractor shall have no further obligation to deliver the Services.</li></ul>Additional updates or work beyond the included monthly allowance will be quoted and agreed in writing before commencement.</div></div>
+      <div class="clause"><div class="clause-num">11.</div><div class="clause-text">Monthly retainer payments are due on the <strong>1st of each calendar month</strong> and must be collected by <strong>Direct Debit</strong>. The Client is solely responsible for setting up and maintaining an active Direct Debit mandate before the monthly retainer commences. Should any payment remain unpaid for more than 30 days beyond the scheduled due date, the Contractor reserves the right to <strong>suspend the Client's website hosting</strong> without further notice until the full outstanding balance has been paid. Hosting will be reinstated promptly upon receipt of payment in full.</div></div>
+      <div class="clause"><div class="clause-num">12.</div><div class="clause-text">The Contractor reserves the right to revise the monthly retainer fee no more than once in any 12-month period. The Contractor will provide the Client with no less than <strong>30 days' written notice</strong> of any such increase prior to the new rate taking effect. Any increase will be capped at the lower of the prevailing UK Consumer Price Index (CPI) rate or <strong>4% per annum</strong>, whichever is lower.</div></div>
+      <div class="clause"><div class="clause-num">13.</div><div class="clause-text">The Contractor will be responsible for all income tax liabilities and National Insurance or similar contributions relating to the Payment and the Contractor will indemnify the Client in respect of any such payments required to be made by the Client.</div></div>
+      <div class="clause"><div class="clause-num">14.</div><div class="clause-text">The Contractor will be solely responsible for the payment of all remuneration and benefits due to the employees of the Contractor, including any National Insurance, income tax and any other form of taxation or social security costs.</div></div>
+      <div class="clause"><div class="clause-num">15.</div><div class="clause-text">The Contractor will not be reimbursed for any expenses incurred in connection with providing the Services of this Agreement.</div></div>
       <div class="section-heading">5. Confidentiality</div>
       <div class="clause"><div class="clause-num">15.</div><div class="clause-text">Confidential information (the "Confidential Information") refers to any data or information relating to the business of the Client which would reasonably be considered to be proprietary to the Client including, but not limited to, accounting records, business processes, and client records and that is not generally known in the industry of the Client and where the release of that Confidential Information could reasonably be expected to cause harm to the Client.</div></div>
       <div class="clause"><div class="clause-num">16.</div><div class="clause-text">The Contractor agrees that they will not disclose, divulge, reveal, report or use, for any purpose, any Confidential Information which the Contractor has obtained, except as authorised by the Client or as required by law. The obligations of confidentiality will apply during the Term and will end on the termination of this Agreement except in the case of any Confidential Information which is a trade secret, in which case those obligations will last indefinitely.</div></div>
@@ -169,20 +170,39 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
       <div class="clause-sub-heading"><div class="clause-num"></div><div class="clause-text">No Exclusivity</div></div>
       <div class="clause"><div class="clause-num">25.</div><div class="clause-text">The Parties acknowledge that this Agreement is non-exclusive and that either Party will be free, during and after the Term, to engage or contract with third parties for the provision of services similar to the Services.</div></div>
       <div class="section-heading">9. Notices</div>
-      <div class="clause"><div class="clause-num">26.</div><div class="clause-text">All notices, requests, demands or other communications required or permitted by the terms of this Agreement will be given in writing and delivered to the Parties at the following addresses:<ul><li><strong>Client:</strong> {{CLIENT_NAME}}, {{CLIENT_ADDRESS}}</li><li><strong>Contractor:</strong> AventraSites TA / DemandHub UK, St Mary's House, Netherhampton, Salisbury, Wiltshire, SP2 8PU</li></ul>or to such other address as either Party may from time to time notify the other.</div></div>
+      <div class="clause"><div class="clause-num">26.</div><div class="clause-text">All notices, requests, demands or other communications required or permitted by the terms of this Agreement will be given in writing and delivered to the Parties at the following addresses:<ul><li><strong>Client:</strong> {{CLIENT_NAME}}, {{CLIENT_ADDRESS}}</li><li><strong>Contractor:</strong> Aventra Sites Ltd, St Mary's House, Netherhampton, Salisbury, Wiltshire, SP2 8PU</li></ul>or to such other address as either Party may from time to time notify the other.</div></div>
       <div class="section-heading">10. Indemnification</div>
       <div class="clause"><div class="clause-num">27.</div><div class="clause-text">Except to the extent paid in settlement from any applicable insurance policies, and to the extent permitted by applicable law, each Party agrees to indemnify and hold harmless the other Party, and its respective directors, shareholders, affiliates, officers, agents, employees, and permitted successors and assigns against any and all claims, losses, damages, liabilities, penalties, punitive damages, expenses, reasonable legal fees and costs of any kind or amount whatsoever, which result from or arise out of any act or omission of the indemnifying party, its respective directors, shareholders, affiliates, officers, agents, employees, and permitted successors and assigns that occurs in connection with this Agreement. This indemnification will survive the termination of this Agreement.</div></div>
-      <div class="section-heading">11. General Provisions</div>
-      <div class="clause"><div class="clause-num">28.</div><div class="clause-text"><strong>Modification.</strong> Any amendment or modification of this Agreement or additional obligation assumed by either Party in connection with this Agreement will only be binding if evidenced in writing signed by each Party or an authorised representative of each Party.</div></div>
-      <div class="clause"><div class="clause-num">29.</div><div class="clause-text"><strong>Time of the Essence.</strong> Time is of the essence in this Agreement. No extension or variation of this Agreement will operate as a waiver of this provision.</div></div>
-      <div class="clause"><div class="clause-num">30.</div><div class="clause-text"><strong>Assignment.</strong> The Contractor will not voluntarily, or by operation of law, assign or otherwise transfer its obligations under this Agreement without the prior written consent of the Client.</div></div>
-      <div class="clause"><div class="clause-num">31.</div><div class="clause-text"><strong>Entire Agreement.</strong> It is agreed that there is no representation, warranty, collateral agreement or condition affecting this Agreement except as expressly provided in this Agreement.</div></div>
-      <div class="clause"><div class="clause-num">32.</div><div class="clause-text"><strong>Enurement.</strong> This Agreement will enure to the benefit of and be binding on the Parties and their respective heirs, executors, administrators and permitted successors and assigns.</div></div>
-      <div class="clause"><div class="clause-num">33.</div><div class="clause-text"><strong>Headings.</strong> Headings are inserted for the convenience of the Parties only and are not to be considered when interpreting this Agreement.</div></div>
-      <div class="clause"><div class="clause-num">34.</div><div class="clause-text"><strong>Gender.</strong> Words in the singular mean and include the plural and vice versa. Words in the masculine mean and include the feminine and vice versa.</div></div>
-      <div class="clause"><div class="clause-num">35.</div><div class="clause-text"><strong>Governing Law.</strong> This Agreement will be governed by and construed in accordance with the laws of England and Wales.</div></div>
-      <div class="clause"><div class="clause-num">36.</div><div class="clause-text"><strong>Severability.</strong> In the event that any of the provisions of this Agreement are held to be invalid or unenforceable in whole or in part, all other provisions will nevertheless continue to be valid and enforceable with the invalid or unenforceable parts severed from the remainder of this Agreement.</div></div>
-      <div class="clause"><div class="clause-num">37.</div><div class="clause-text"><strong>Waiver.</strong> The waiver by either Party of a breach, default, delay or omission of any of the provisions of this Agreement by the other Party will not be construed as a waiver of any subsequent breach of the same or other provisions.</div></div>
+      <div class="section-heading">11. Client Obligations</div>
+      <div class="clause"><div class="clause-num">28.</div><div class="clause-text">The Client agrees to provide the Contractor with all necessary materials, content, information, login credentials, and approvals required to perform the Services in a timely manner. Any delay caused by the Client's failure to provide such materials may result in delays to the agreed timeline, for which the Contractor shall bear no responsibility and which shall not affect the Client's payment obligations.</div></div>
+      <div class="clause"><div class="clause-num">29.</div><div class="clause-text">The Client is responsible for ensuring that all content, images, text, and materials provided to the Contractor for inclusion on the website do not infringe any third-party intellectual property rights, are not unlawful, defamatory, or misleading, and comply with all applicable laws and regulations. The Contractor accepts no liability for any content provided by the Client.</div></div>
+      <div class="section-heading">12. Acceptable Use</div>
+      <div class="clause"><div class="clause-num">30.</div><div class="clause-text">The Client agrees not to use the website or hosting services for any unlawful, harmful, or objectionable purpose, including but not limited to: distributing malware or malicious code, engaging in fraudulent activity, hosting illegal content, infringing third-party rights, or sending unsolicited bulk communications (spam).</div></div>
+      <div class="clause"><div class="clause-num">31.</div><div class="clause-text">The Contractor reserves the right to suspend or terminate the hosting services immediately and without prior notice if the Client is found to be in breach of this acceptable use policy. The Client shall indemnify and hold the Contractor harmless against any and all claims, costs, or penalties arising from such misuse.</div></div>
+      <div class="section-heading">13. Uptime, Availability &amp; Backups</div>
+      <div class="clause"><div class="clause-num">32.</div><div class="clause-text">The Contractor will use reasonable endeavours to maintain the availability of the Client's website. However, the Contractor does not guarantee uninterrupted, error-free, or continuous hosting and shall not be liable for any downtime, outage, or loss of access caused by third-party hosting or infrastructure providers, scheduled maintenance, software updates, or circumstances beyond the Contractor's reasonable control.</div></div>
+      <div class="clause"><div class="clause-num">33.</div><div class="clause-text">Unless expressly agreed in writing as part of the Services, the Contractor does not guarantee the provision of website backups. The Client is solely responsible for maintaining their own copies of all website content, data, and files. The Contractor shall not be liable for any loss, corruption, or deletion of data howsoever caused.</div></div>
+      <div class="section-heading">14. Data Protection</div>
+      <div class="clause"><div class="clause-num">34.</div><div class="clause-text">Both Parties agree to comply with all applicable data protection legislation, including the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. The Contractor will process any personal data received from the Client solely for the purposes of performing the Services under this Agreement and will not share such data with third parties except where required to deliver the Services or as required by law.</div></div>
+      <div class="section-heading">15. Limitation of Liability</div>
+      <div class="clause"><div class="clause-num">35.</div><div class="clause-text">The Contractor's total aggregate liability to the Client under or in connection with this Agreement, whether arising in contract, tort (including negligence), breach of statutory duty, or otherwise, shall not exceed the total fees paid by the Client to the Contractor in the three (3) calendar months immediately preceding the event giving rise to the claim.</div></div>
+      <div class="clause"><div class="clause-num">36.</div><div class="clause-text">Neither Party shall be liable to the other for any indirect, special, incidental, consequential, or punitive loss or damage, including but not limited to loss of profits, loss of revenue, loss of business opportunity, loss of anticipated savings, loss of data, or damage to reputation, howsoever arising and whether or not that Party had been advised of the possibility of such loss or damage.</div></div>
+      <div class="section-heading">16. Force Majeure</div>
+      <div class="clause"><div class="clause-num">37.</div><div class="clause-text">Neither Party shall be in breach of this Agreement or liable for any delay in performing, or failure to perform, any of its obligations under this Agreement if such delay or failure results from events, circumstances, or causes beyond its reasonable control, including but not limited to acts of God, fire, flood, storm, pandemic, epidemic, war, terrorism, governmental or regulatory action, power failures, internet service provider outages, or third-party platform failures. In such circumstances, the affected Party shall notify the other as soon as reasonably practicable and shall be entitled to a reasonable extension of time to perform its obligations.</div></div>
+      <div class="section-heading">17. Domain &amp; Website Handover on Termination</div>
+      <div class="clause"><div class="clause-num">38.</div><div class="clause-text">Upon termination of this Agreement, and subject to all outstanding payments being settled in full, the Contractor will provide the Client with a copy of the website files upon written request. The Client acknowledges that all hosting services will cease on the effective date of termination and the website will be taken offline. The Contractor shall have no ongoing obligation to store or maintain the website files beyond 30 days following the termination date.</div></div>
+      <div class="clause"><div class="clause-num">39.</div><div class="clause-text">Where the Contractor has registered or managed a domain name on behalf of the Client, the Client may request transfer of that domain to a registrar of their choosing upon termination of this Agreement, subject to all outstanding balances being settled in full. The Contractor shall use reasonable endeavours to facilitate the transfer but shall not be responsible for any third-party transfer fees, delays, or conditions imposed by the domain registrar.</div></div>
+      <div class="section-heading">18. General Provisions</div>
+      <div class="clause"><div class="clause-num">40.</div><div class="clause-text"><strong>Modification.</strong> Any amendment or modification of this Agreement or additional obligation assumed by either Party in connection with this Agreement will only be binding if evidenced in writing signed by each Party or an authorised representative of each Party.</div></div>
+      <div class="clause"><div class="clause-num">41.</div><div class="clause-text"><strong>Time of the Essence.</strong> Time is of the essence in this Agreement. No extension or variation of this Agreement will operate as a waiver of this provision.</div></div>
+      <div class="clause"><div class="clause-num">42.</div><div class="clause-text"><strong>Assignment.</strong> The Contractor will not voluntarily, or by operation of law, assign or otherwise transfer its obligations under this Agreement without the prior written consent of the Client.</div></div>
+      <div class="clause"><div class="clause-num">43.</div><div class="clause-text"><strong>Entire Agreement.</strong> It is agreed that there is no representation, warranty, collateral agreement or condition affecting this Agreement except as expressly provided in this Agreement.</div></div>
+      <div class="clause"><div class="clause-num">44.</div><div class="clause-text"><strong>Enurement.</strong> This Agreement will enure to the benefit of and be binding on the Parties and their respective heirs, executors, administrators and permitted successors and assigns.</div></div>
+      <div class="clause"><div class="clause-num">45.</div><div class="clause-text"><strong>Headings.</strong> Headings are inserted for the convenience of the Parties only and are not to be considered when interpreting this Agreement.</div></div>
+      <div class="clause"><div class="clause-num">46.</div><div class="clause-text"><strong>Gender.</strong> Words in the singular mean and include the plural and vice versa. Words in the masculine mean and include the feminine and vice versa.</div></div>
+      <div class="clause"><div class="clause-num">47.</div><div class="clause-text"><strong>Governing Law.</strong> This Agreement will be governed by and construed in accordance with the laws of England and Wales.</div></div>
+      <div class="clause"><div class="clause-num">48.</div><div class="clause-text"><strong>Severability.</strong> In the event that any of the provisions of this Agreement are held to be invalid or unenforceable in whole or in part, all other provisions will nevertheless continue to be valid and enforceable with the invalid or unenforceable parts severed from the remainder of this Agreement.</div></div>
+      <div class="clause"><div class="clause-num">49.</div><div class="clause-text"><strong>Waiver.</strong> The waiver by either Party of a breach, default, delay or omission of any of the provisions of this Agreement by the other Party will not be construed as a waiver of any subsequent breach of the same or other provisions.</div></div>
     </div>
     <div class="signature-section">
       <h2>Signatures</h2>
@@ -195,7 +215,7 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
           <div class="sig-date-line"><div class="sig-line"></div><div class="sig-label">Date</div></div>
         </div>
         <div class="sig-block">
-          <div class="sig-party">Contractor — Aventra</div>
+          <div class="sig-party">Contractor — Aventra Sites Ltd</div>
           <div class="sig-line"></div>
           <div class="sig-label">Signature</div>
           <div class="sig-name">Joe Clacher</div>
@@ -203,7 +223,7 @@ const CONTRACT_TEMPLATE = `<!DOCTYPE html>
         </div>
       </div>
     </div>
-    <div class="footer">Aventra &mdash; Web Design &amp; Development &mdash; AventraSites TA / DemandHub UK &mdash; {{CONTRACT_REF}}</div>
+    <div class="footer">Aventra Sites Ltd &mdash; Web Design &amp; Development &mdash; St Mary's House, Netherhampton, Salisbury, SP2 8PU &mdash; {{CONTRACT_REF}}</div>
   </div>
 </body>
 </html>`;
@@ -214,8 +234,8 @@ const DEFAULT_FIELDS = {
   clientAddress: '',
   contractDate: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
   contractRef: `AVN-${new Date().getFullYear()}-001`,
-  oneOffFee: '£250',
-  monthlyFee: '£25/month',
+  oneOffFee: '£499',
+  monthlyFee: '£35/month',
   updatesPerMonth: '2',
   domainHostingIncluded: 'Included',
   domainFee: '£10/year (included in retainer)',
@@ -360,7 +380,7 @@ export default function ContractsView() {
             <Field label="One-off Setup Fee">
               <input
                 className={inputCls}
-                placeholder="e.g. £250"
+                placeholder="e.g. £499"
                 value={fields.oneOffFee}
                 onChange={e => set('oneOffFee', e.target.value)}
               />
@@ -368,7 +388,7 @@ export default function ContractsView() {
             <Field label="Monthly Retainer">
               <input
                 className={inputCls}
-                placeholder="e.g. £25/month"
+                placeholder="e.g. £35/month"
                 value={fields.monthlyFee}
                 onChange={e => set('monthlyFee', e.target.value)}
               />
