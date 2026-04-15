@@ -44,4 +44,7 @@ export const api = {
 
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
+
+  // Email usage
+  getEmailUsage: ()         => req('/email-usage'),
 };

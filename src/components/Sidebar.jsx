@@ -1,4 +1,6 @@
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail } from 'lucide-react';
+import { api } from '../utils/api';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard',       Icon: LayoutDashboard },
@@ -11,6 +13,12 @@ const NAV = [
 export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead }) {
   const overdueCount = analytics?.overdueTasksCount || 0;
   const todayCount   = analytics?.todayTasksCount   || 0;
+
+  const [emailUsage, setEmailUsage] = useState(null);
+
+  useEffect(() => {
+    api.getEmailUsage().then(setEmailUsage).catch(() => {});
+  }, []);
 
   return (
     <aside className="w-60 bg-slate-900 flex flex-col h-screen shrink-0">
@@ -68,6 +76,29 @@ export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead
             </div>
           </div>
         )}
+        {emailUsage && (() => {
+          const { used, limit } = emailUsage.monthly;
+          const pct = Math.min((used / limit) * 100, 100);
+          const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+          return (
+            <div className="space-y-1.5 px-1">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <Mail size={11} />
+                  Email Usage
+                </span>
+                <span className="text-xs text-slate-400 tabular-nums">{used} / {limit.toLocaleString()}</span>
+              </div>
+              <div className="w-full bg-slate-700 rounded-full h-1.5">
+                <div
+                  className={`h-1.5 rounded-full transition-all ${barColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="text-slate-600 text-xs">free emails this month</p>
+            </div>
+          );
+        })()}
         <button
           onClick={onSetup}
           className="w-full flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg text-xs font-medium transition-colors"
