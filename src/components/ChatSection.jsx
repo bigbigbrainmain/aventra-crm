@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  collection, query, where, orderBy, onSnapshot,
+  collection, query, where, onSnapshot,
   addDoc, updateDoc, doc, serverTimestamp,
 } from 'firebase/firestore';
 import { MessageSquare, Check, Plus, Send, ChevronDown, ChevronUp } from 'lucide-react';
@@ -298,15 +298,19 @@ export default function ChatSection({ entityId, entityType, entityName, focusThr
   useEffect(() => {
     const q = query(
       collection(db, 'threads'),
-      where('entityId', '==', entityId),
-      where('entityType', '==', entityType),
-      orderBy('createdAt', 'desc')
+      where('entityId', '==', entityId)
     );
     const unsub = onSnapshot(q, snap => {
-      setThreads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      docs.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() ?? 0;
+        const tb = b.createdAt?.toMillis?.() ?? 0;
+        return tb - ta;
+      });
+      setThreads(docs);
     });
     return unsub;
-  }, [entityId, entityType]);
+  }, [entityId]);
 
   // Auto-expand composer if deep-linked to a thread (so user sees context)
   useEffect(() => {
