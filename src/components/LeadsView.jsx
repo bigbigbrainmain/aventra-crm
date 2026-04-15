@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star } from 'lucide-react';
+import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star, Maximize2, Minimize2 } from 'lucide-react';
 import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG } from '../utils/constants';
 
 const PRIORITIES = Object.keys(PRIORITY_CONFIG);
@@ -84,12 +84,13 @@ function StatusBadge({ status }) {
   );
 }
 
-function LeadCard({ lead, onClick, onToggleFavourite }) {
+function LeadCard({ lead, onClick, onToggleFavourite, isExpanded, onToggleExpand }) {
   const p = getPriorityStyle(lead.priority);
   return (
     <div
       onClick={onClick}
-      className="bg-white border border-slate-100 rounded-xl p-4 text-left hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+      className={`bg-white border border-slate-100 rounded-xl p-4 text-left hover:shadow-md hover:border-blue-200 transition-all cursor-pointer
+        ${isExpanded ? 'col-span-full' : ''}`}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -105,12 +106,19 @@ function LeadCard({ lead, onClick, onToggleFavourite }) {
             <Star size={13} fill={lead.isFavourite ? 'currentColor' : 'none'} />
           </button>
           <StatusBadge status={lead.status} />
+          <button
+            onClick={e => { e.stopPropagation(); onToggleExpand(lead.id); }}
+            title={isExpanded ? 'Collapse' : 'Expand'}
+            className="p-0.5 rounded text-slate-300 hover:text-slate-500 transition-colors"
+          >
+            {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
         </div>
       </div>
 
       <p className="text-xs text-slate-400 mb-3 truncate">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</p>
 
-      <div className="space-y-1">
+      <div className={isExpanded ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-1' : 'space-y-1'}>
         {lead.email && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Mail size={11} className="shrink-0" />
@@ -147,6 +155,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
     catch { return []; }
@@ -312,6 +321,8 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
               lead={lead}
               onClick={() => onSelectLead(lead)}
               onToggleFavourite={onToggleFavourite}
+              isExpanded={expandedId === lead.id}
+              onToggleExpand={id => setExpandedId(expandedId === id ? null : id)}
             />
           ))}
         </div>
