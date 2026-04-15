@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  collection, query, where, onSnapshot,
+  collection, query, where, orderBy, onSnapshot,
   addDoc, updateDoc, doc, serverTimestamp,
 } from 'firebase/firestore';
 import { MessageSquare, Check, Plus, Send, ChevronDown, ChevronUp } from 'lucide-react';
