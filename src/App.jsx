@@ -23,7 +23,6 @@ function CRMApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  if (!user) return <LoginScreen />;
   const handleToggleFavourite = useCallback(async (leadId) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
@@ -62,8 +61,9 @@ function CRMApp() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     loadData();
-  }, [loadData]);
+  }, [loadData, user]);
 
   // Deep-link: read hash after leads load, e.g. /#lead=lead_123&thread=abc
   useEffect(() => {
@@ -94,6 +94,14 @@ function CRMApp() {
     setSelectedLead(null);
     loadData(); // refresh analytics
   }, [loadData]);
+
+  // user === undefined means auth is still initialising
+  if (user === undefined) return (
+    <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (!user) return <LoginScreen />;
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
