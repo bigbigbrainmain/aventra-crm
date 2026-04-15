@@ -42,6 +42,12 @@ export const api = {
   updateCustomer:  (id, data)   => req(`/customer?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
   deleteCustomer:  (id)         => req(`/customer?id=${id}`,  { method: 'DELETE' }),
 
+  // Documents
+  getDocuments:    ()           => req('/documents'),
+  createDocument:  (data)       => req('/documents',          { method: 'POST',   body: JSON.stringify(data) }),
+  updateDocument:  (id, data)   => req(`/document?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
+  deleteDocument:  (id)         => req(`/document?id=${id}`,  { method: 'DELETE' }),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 

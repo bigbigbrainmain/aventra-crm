@@ -7,6 +7,7 @@ const TABS = {
   NOTES: 'Notes',
   TASKS: 'Tasks',
   CUSTOMERS: 'Live Customers',
+  DOCUMENTS: 'Documents',
 };
 
 function getClient() {
@@ -72,6 +73,19 @@ function rowToCustomer(row, rowNum) {
     monthlyFee: String(row[6] || ''),
     status: String(row[7] || 'Active'),
     notes: String(row[8] || ''),
+    _row: rowNum,
+  };
+}
+
+// Document columns: A(0)=ID, B(1)=Title, C(2)=URL, D(3)=Category, E(4)=Description, F(5)=Added Date
+function rowToDocument(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    title: String(row[1] || ''),
+    url: String(row[2] || ''),
+    category: String(row[3] || 'General'),
+    description: String(row[4] || ''),
+    addedDate: String(row[5] || ''),
     _row: rowNum,
   };
 }
@@ -171,6 +185,7 @@ module.exports = {
   rowToNote,
   rowToTask,
   rowToCustomer,
+  rowToDocument,
   getRange,
   appendRow,
   updateCell,

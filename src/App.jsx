@@ -5,6 +5,7 @@ import LeadsView from './components/LeadsView';
 import TasksView from './components/TasksView';
 import ContractsView from './components/ContractsView';
 import CustomersView from './components/CustomersView';
+import DocumentsView from './components/DocumentsView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import LoginScreen from './components/LoginScreen';
@@ -173,6 +174,7 @@ function CRMApp() {
             )}
             {view === 'contracts' && <ContractsView />}
             {view === 'customers' && <CustomersView />}
+            {view === 'documents' && <DocumentsView />}
           </>
         )}
       </main>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen } from 'lucide-react';
 import { api } from '../utils/api';
 
 const NAV = [
@@ -8,6 +8,7 @@ const NAV = [
   { id: 'customers', label: 'Live Customers',  Icon: Globe            },
   { id: 'tasks',     label: 'Tasks',           Icon: CheckSquare      },
   { id: 'contracts', label: 'Contracts',       Icon: FileText         },
+  { id: 'documents', label: 'Internal Docs',   Icon: BookOpen         },
 ];
 
 export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead }) {
