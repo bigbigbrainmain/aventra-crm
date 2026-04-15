@@ -19,6 +19,7 @@ function CRMApp() {
   const [tasks, setTasks] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [detailExpanded, setDetailExpanded] = useState(false);
   const [deepLinkThread, setDeepLinkThread] = useState(null);
   const [showEnterLead, setShowEnterLead] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -121,7 +122,7 @@ function CRMApp() {
         }}
       />
 
-      <main className="flex-1 overflow-y-auto scrollbar-thin">
+      <main className={`flex-1 overflow-y-auto scrollbar-thin transition-all duration-200 ${selectedLead && !detailExpanded ? 'pr-[32rem]' : ''}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -192,12 +193,14 @@ function CRMApp() {
       {selectedLead && (
         <LeadDetail
           lead={selectedLead}
-          onClose={() => { setSelectedLead(null); setDeepLinkThread(null); }}
+          onClose={() => { setSelectedLead(null); setDeepLinkThread(null); setDetailExpanded(false); }}
           onUpdate={handleLeadUpdate}
           onDelete={handleLeadDelete}
           onTasksChange={loadData}
           onToggleFavourite={handleToggleFavourite}
           focusThreadId={deepLinkThread}
+          expanded={detailExpanded}
+          onToggleExpand={() => setDetailExpanded(v => !v)}
         />
       )}
     </div>

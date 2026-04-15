@@ -36,7 +36,7 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId }) {
+export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId, expanded, onToggleExpand }) {
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -191,20 +191,18 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     }
   };
 
-  const [expanded, setExpanded] = useState(false);
-
   const incompleteTasks = tasks.filter(t => !t.completed);
   const completedTasks  = tasks.filter(t => t.completed);
   const priorityCfg = getPriorityStyle(lead.priority);
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40" onClick={onClose} />
+      {/* Overlay — only in expanded mode; small mode keeps background interactive */}
+      {expanded && <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40" onClick={onClose} />}
 
       {/* Panel */}
       <div className={`fixed top-0 right-0 h-full bg-white shadow-2xl z-50 flex flex-col overflow-hidden transition-all duration-200
-        ${expanded ? 'left-60 w-auto max-w-none' : 'w-full max-w-lg'}`}>
+        ${expanded ? 'left-16 w-auto max-w-none' : 'w-full max-w-lg'}`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0">
@@ -234,7 +232,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
               <Star size={17} fill={lead.isFavourite ? 'currentColor' : 'none'} />
             </button>
             <button
-              onClick={() => setExpanded(v => !v)}
+              onClick={onToggleExpand}
               title={expanded ? 'Collapse panel' : 'Expand panel'}
               className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
             >
