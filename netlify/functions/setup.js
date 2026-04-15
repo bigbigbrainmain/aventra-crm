@@ -34,6 +34,7 @@ exports.handler = async (event) => {
     const toCreate = [];
     if (!existingTabs.includes('Notes')) toCreate.push('Notes');
     if (!existingTabs.includes('Tasks')) toCreate.push('Tasks');
+    if (!existingTabs.includes('Live Customers')) toCreate.push('Live Customers');
 
     if (toCreate.length > 0) {
       await sheets.spreadsheets.batchUpdate({
@@ -58,6 +59,14 @@ exports.handler = async (event) => {
           range: 'Tasks!A1:F1',
           valueInputOption: 'USER_ENTERED',
           requestBody: { values: [['ID', 'Lead ID', 'Description', 'Due Date', 'Completed', 'Created Date']] },
+        }));
+      }
+      if (toCreate.includes('Live Customers')) {
+        headerUpdates.push(sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: 'Live Customers!A1:I1',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [['ID', 'Business Name', 'Domain', 'Netlify URL', 'GitHub Folder', 'Go Live Date', 'Monthly Fee', 'Status', 'Notes']] },
         }));
       }
       await Promise.all(headerUpdates);

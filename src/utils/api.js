@@ -36,6 +36,12 @@ export const api = {
   // Analytics
   getAnalytics: ()          => req('/analytics'),
 
+  // Live Customers
+  getCustomers:    ()           => req('/customers'),
+  createCustomer:  (data)       => req('/customers',          { method: 'POST',   body: JSON.stringify(data) }),
+  updateCustomer:  (id, data)   => req(`/customer?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
+  deleteCustomer:  (id)         => req(`/customer?id=${id}`,  { method: 'DELETE' }),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 };

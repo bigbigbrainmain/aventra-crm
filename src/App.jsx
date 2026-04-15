@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import LeadsView from './components/LeadsView';
 import TasksView from './components/TasksView';
 import ContractsView from './components/ContractsView';
+import CustomersView from './components/CustomersView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import { api } from './utils/api';
@@ -138,6 +139,7 @@ export default function App() {
               />
             )}
             {view === 'contracts' && <ContractsView />}
+            {view === 'customers' && <CustomersView />}
           </>
         )}
       </main>

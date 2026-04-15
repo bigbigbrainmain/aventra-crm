@@ -6,6 +6,7 @@ const TABS = {
   LEADS: 'Leads Pipeline',
   NOTES: 'Notes',
   TASKS: 'Tasks',
+  CUSTOMERS: 'Live Customers',
 };
 
 function getClient() {
@@ -54,6 +55,23 @@ function rowToNote(row, rowNum) {
     text: String(row[2] || ''),
     timestamp: String(row[3] || ''),
     actioned: row[4] === 'TRUE' || row[4] === true,
+    _row: rowNum,
+  };
+}
+
+// Customer columns: A(0)=ID, B(1)=Business Name, C(2)=Domain, D(3)=Netlify URL,
+// E(4)=GitHub Folder, F(5)=Go Live Date, G(6)=Monthly Fee, H(7)=Status, I(8)=Notes
+function rowToCustomer(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    businessName: String(row[1] || ''),
+    domain: String(row[2] || ''),
+    netlifyUrl: String(row[3] || ''),
+    githubFolder: String(row[4] || ''),
+    goLiveDate: String(row[5] || ''),
+    monthlyFee: String(row[6] || ''),
+    status: String(row[7] || 'Active'),
+    notes: String(row[8] || ''),
     _row: rowNum,
   };
 }
@@ -152,6 +170,7 @@ module.exports = {
   rowToLead,
   rowToNote,
   rowToTask,
+  rowToCustomer,
   getRange,
   appendRow,
   updateCell,

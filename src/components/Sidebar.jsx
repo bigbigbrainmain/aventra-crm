@@ -1,10 +1,11 @@
-import { LayoutDashboard, Users, CheckSquare, FileText, Settings, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle } from 'lucide-react';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard',  Icon: LayoutDashboard },
-  { id: 'leads',     label: 'All Leads',  Icon: Users            },
-  { id: 'tasks',     label: 'Tasks',      Icon: CheckSquare      },
-  { id: 'contracts', label: 'Contracts',  Icon: FileText         },
+  { id: 'dashboard', label: 'Dashboard',       Icon: LayoutDashboard },
+  { id: 'leads',     label: 'All Leads',       Icon: Users            },
+  { id: 'customers', label: 'Live Customers',  Icon: Globe            },
+  { id: 'tasks',     label: 'Tasks',           Icon: CheckSquare      },
+  { id: 'contracts', label: 'Contracts',       Icon: FileText         },
 ];
 
 export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead }) {
