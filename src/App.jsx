@@ -7,17 +7,23 @@ import ContractsView from './components/ContractsView';
 import CustomersView from './components/CustomersView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
+import LoginScreen from './components/LoginScreen';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { api } from './utils/api';
 
-export default function App() {
+function CRMApp() {
+  const { user } = useAuth();
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [deepLinkThread, setDeepLinkThread] = useState(null);
   const [showEnterLead, setShowEnterLead] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  if (!user) return <LoginScreen />;
   const handleToggleFavourite = useCallback(async (leadId) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
@@ -58,6 +64,25 @@ export default function App() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Deep-link: read hash after leads load, e.g. /#lead=lead_123&thread=abc
+  useEffect(() => {
+    if (!leads.length) return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const leadId = params.get('lead');
+    const threadId = params.get('thread');
+    if (leadId) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        setView('leads');
+        setSelectedLead(lead);
+        if (threadId) setDeepLinkThread(threadId);
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [leads]);
 
   const handleLeadUpdate = useCallback((updatedLead) => {
     setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
@@ -157,13 +182,22 @@ export default function App() {
       {selectedLead && (
         <LeadDetail
           lead={selectedLead}
-          onClose={() => setSelectedLead(null)}
+          onClose={() => { setSelectedLead(null); setDeepLinkThread(null); }}
           onUpdate={handleLeadUpdate}
           onDelete={handleLeadDelete}
           onTasksChange={loadData}
           onToggleFavourite={handleToggleFavourite}
+          focusThreadId={deepLinkThread}
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <CRMApp />
+    </AuthProvider>
   );
 }

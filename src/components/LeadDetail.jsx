@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
+import ChatSection from './ChatSection';
 
 function Section({ title, children, action }) {
   return (
@@ -35,7 +36,7 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite }) {
+export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId }) {
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -453,6 +454,14 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
               )}
             </div>
           </Section>
+
+          {/* Chats */}
+          <ChatSection
+            entityId={lead.id}
+            entityType="lead"
+            entityName={lead.businessName}
+            focusThreadId={focusThreadId}
+          />
 
           {/* Tasks */}
           <Section title={`Tasks (${incompleteTasks.length} open)`}>
