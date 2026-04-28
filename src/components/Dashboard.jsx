@@ -1,4 +1,5 @@
-import { ArrowRight, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, AlertTriangle, Clock, TrendingUp, ChevronDown } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, Cell,
@@ -75,16 +76,55 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const RANGE_OPTIONS = [
+  { label: 'Last 3 months',  value: 3  },
+  { label: 'Last 6 months',  value: 6  },
+  { label: 'Last 12 months', value: 12 },
+];
+
+function TimelineDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const selected = RANGE_OPTIONS.find(o => o.value === value);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 transition-colors"
+      >
+        {selected?.label}
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-[140px]">
+          {RANGE_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => { onChange(o.value); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 first:rounded-t-lg last:rounded-b-lg transition-colors ${o.value === value ? 'font-semibold text-blue-600' : 'text-slate-700'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard({ leads, tasks, analytics, onSelectLead, setView }) {
+  const [closedWonRange, setClosedWonRange] = useState(6);
+  const [activityRange, setActivityRange] = useState(6);
+
   const todayTasks = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
   const overdueTasks = tasks.filter(t => !t.completed && isOverdue(t.dueDate));
   const recentLeads = [...leads].sort((a, b) => (b.id > a.id ? 1 : -1)).slice(0, 6);
   const leadById = Object.fromEntries(leads.map(l => [l.id, l]));
 
-  const months = getLastNMonths(6);
+  const closedWonMonths = getLastNMonths(closedWonRange);
+  const activityMonths = getLastNMonths(activityRange);
 
   // Stacked bar: leads pitched per month by status
-  const pipelineActivity = months.map(m => {
+  const pipelineActivity = activityMonths.map(m => {
     const ml = leads.filter(l => getLeadMonth(l) === m.key);
     const row = { month: m.label };
     Object.keys(STATUS_COLORS).forEach(s => {
@@ -94,7 +134,7 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
   });
 
   // Simple bar: closed won per month
-  const closedWonByMonth = months.map(m => ({
+  const closedWonByMonth = closedWonMonths.map(m => ({
     month: m.label,
     'Closed Won': leads.filter(l => l.status === 'Closed Won' && getLeadMonth(l) === m.key).length,
   }));
@@ -152,8 +192,11 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
 
         {/* Closed Won by month */}
         <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-          <h3 className="font-semibold text-slate-900">Closed Won by Month</h3>
-          <p className="text-xs text-slate-400 mt-0.5 mb-4">Based on date pitched · last 6 months</p>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-slate-900">Closed Won by Month</h3>
+            <TimelineDropdown value={closedWonRange} onChange={setClosedWonRange} />
+          </div>
+          <p className="text-xs text-slate-400 mb-4">Based on date pitched</p>
           <ResponsiveContainer width="100%" height={190}>
             <BarChart data={closedWonByMonth} barSize={34} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -170,8 +213,11 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
 
       {/* Pipeline activity stacked bar */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
-        <h3 className="font-semibold text-slate-900">Pipeline Activity</h3>
-        <p className="text-xs text-slate-400 mt-0.5 mb-4">Leads pitched per month by current status · last 6 months</p>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-slate-900">Pipeline Activity</h3>
+          <TimelineDropdown value={activityRange} onChange={setActivityRange} />
+        </div>
+        <p className="text-xs text-slate-400 mb-4">Leads pitched per month by current status</p>
         <ResponsiveContainer width="100%" height={230}>
           <BarChart data={pipelineActivity} barSize={40} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
