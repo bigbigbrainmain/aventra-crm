@@ -120,7 +120,7 @@ export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead
               <p className="text-slate-400 text-xs mt-0.5">Leads</p>
             </div>
             <div className="bg-slate-800 rounded-lg py-2">
-              <p className="text-white font-bold text-lg leading-none">{analytics.byStatus?.['Live/Paid'] || 0}</p>
+              <p className="text-white font-bold text-lg leading-none">{analytics.byStatus?.['Closed Won'] || 0}</p>
               <p className="text-slate-400 text-xs mt-0.5">Live</p>
             </div>
           </div>
