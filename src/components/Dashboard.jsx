@@ -53,27 +53,9 @@ function parseMonthlyFee(raw) {
 }
 
 function matchCustomer(lead, customers) {
-  if (!customers?.length) return null;
-  const norm = s => s.toLowerCase().trim();
-  const leadName = norm(lead.businessName);
-
-  // 1. exact match
-  const exact = customers.find(c => norm(c.businessName) === leadName);
-  if (exact) return exact;
-
-  // 2. fuzzy: Jaccard similarity on words longer than 2 chars
-  const words = s => new Set(norm(s).split(/\s+/).filter(w => w.length > 2));
-  const leadWords = words(lead.businessName);
-  if (!leadWords.size) return null;
-
-  let best = null, bestScore = 0;
-  for (const c of customers) {
-    const cWords = words(c.businessName);
-    const shared = [...leadWords].filter(w => cWords.has(w)).length;
-    const score  = shared / (new Set([...leadWords, ...cWords]).size);
-    if (score > bestScore && score >= 0.4) { bestScore = score; best = c; }
-  }
-  return best;
+  return customers?.find(
+    c => c.businessName.toLowerCase().trim() === lead.businessName.toLowerCase().trim()
+  ) || null;
 }
 
 // ─── small components ────────────────────────────────────────────────────────
