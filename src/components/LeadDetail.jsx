@@ -46,8 +46,8 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [addingTask, setAddingTask] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
-  const [editingContact, setEditingContact] = useState(false);
-  const [contactDraft, setContactDraft] = useState({});
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({});
 
   const loadNotesAndTasks = useCallback(async () => {
     const [n, t] = await Promise.all([
@@ -85,18 +85,25 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     }
   };
 
-  // Edit contact info
-  const startEditContact = () => {
-    setContactDraft({ email: lead.email, phone: lead.phone, website: lead.website });
-    setEditingContact(true);
+  // Edit entire lead
+  const startEdit = () => {
+    setDraft({
+      businessName: lead.businessName,
+      industry:     lead.industry,
+      city:         lead.city,
+      email:        lead.email,
+      phone:        lead.phone,
+      website:      lead.website,
+    });
+    setEditing(true);
   };
 
-  const saveContact = async () => {
-    const updated = { ...lead, ...contactDraft };
+  const saveEdit = async () => {
+    const updated = { ...lead, ...draft };
     onUpdate(updated);
-    setEditingContact(false);
+    setEditing(false);
     try {
-      await api.updateLead(lead.id, contactDraft);
+      await api.updateLead(lead.id, draft);
     } catch (err) {
       console.error(err);
       onUpdate(lead);
@@ -205,15 +212,24 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
         ${expanded ? 'left-16 w-auto max-w-none' : 'w-full max-w-lg'}`}>
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
-          <div className="min-w-0">
-            <a
-              href={`https://www.google.com/search?q=${encodeURIComponent(`${lead.businessName} ${lead.city}`.trim())}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-lg font-bold text-slate-900 leading-tight truncate hover:text-blue-600 hover:underline transition-colors"
-            >
-              {lead.businessName}
-            </a>
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <input
+                autoFocus
+                value={draft.businessName}
+                onChange={e => setDraft(d => ({ ...d, businessName: e.target.value }))}
+                className="text-lg font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(`${lead.businessName} ${lead.city}`.trim())}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-lg font-bold text-slate-900 leading-tight truncate hover:text-blue-600 hover:underline transition-colors"
+              >
+                {lead.businessName}
+              </a>
+            )}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <StatusSelect value={lead.status} onChange={handleStatusChange} />
               {lead.priority && priorityCfg && (
@@ -230,6 +246,13 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
               className={`p-1.5 rounded-lg transition-colors ${lead.isFavourite ? 'text-amber-400 hover:bg-amber-50' : 'text-slate-300 hover:text-amber-400 hover:bg-slate-100'}`}
             >
               <Star size={17} fill={lead.isFavourite ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              onClick={startEdit}
+              title="Edit lead"
+              className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-blue-600"
+            >
+              <Pencil size={15} />
             </button>
             <button
               onClick={onToggleExpand}
@@ -250,25 +273,31 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</span>
-              {!editingContact && (
-                <button
-                  onClick={startEditContact}
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
-                >
-                  <Pencil size={11} />
-                  Edit
-                </button>
-              )}
             </div>
 
-            {editingContact ? (
+            {editing ? (
               <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Tag size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    value={draft.industry}
+                    onChange={e => setDraft(d => ({ ...d, industry: e.target.value }))}
+                    placeholder="Industry"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                  <input
+                    value={draft.city}
+                    onChange={e => setDraft(d => ({ ...d, city: e.target.value }))}
+                    placeholder="City"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <Mail size={14} className="text-slate-400 shrink-0" />
                   <input
                     type="email"
-                    value={contactDraft.email}
-                    onChange={e => setContactDraft(d => ({ ...d, email: e.target.value }))}
+                    value={draft.email}
+                    onChange={e => setDraft(d => ({ ...d, email: e.target.value }))}
                     placeholder="Email"
                     className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
                   />
@@ -277,8 +306,8 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                   <Phone size={14} className="text-slate-400 shrink-0" />
                   <input
                     type="tel"
-                    value={contactDraft.phone}
-                    onChange={e => setContactDraft(d => ({ ...d, phone: e.target.value }))}
+                    value={draft.phone}
+                    onChange={e => setDraft(d => ({ ...d, phone: e.target.value }))}
                     placeholder="Phone"
                     className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
                   />
@@ -287,21 +316,21 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                   <ExternalLink size={14} className="text-slate-400 shrink-0" />
                   <input
                     type="url"
-                    value={contactDraft.website}
-                    onChange={e => setContactDraft(d => ({ ...d, website: e.target.value }))}
+                    value={draft.website}
+                    onChange={e => setDraft(d => ({ ...d, website: e.target.value }))}
                     placeholder="Website URL"
                     className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
                   />
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
-                    onClick={saveContact}
+                    onClick={saveEdit}
                     className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Save
                   </button>
                   <button
-                    onClick={() => setEditingContact(false)}
+                    onClick={() => setEditing(false)}
                     className="px-3 py-1.5 text-slate-500 text-xs font-medium rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     Cancel
@@ -316,7 +345,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                     <span>{lead.email}</span>
                   </a>
                 ) : (
-                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                  <button onClick={startEdit} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
                     <Mail size={14} className="shrink-0" />
                     <span>Add email</span>
                   </button>
@@ -327,7 +356,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                     <span>{lead.phone}</span>
                   </a>
                 ) : (
-                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                  <button onClick={startEdit} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
                     <Phone size={14} className="shrink-0" />
                     <span>Add phone</span>
                   </button>
@@ -338,7 +367,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                     <span className="truncate">{lead.website}</span>
                   </a>
                 ) : (
-                  <button onClick={startEditContact} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                  <button onClick={startEdit} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
                     <ExternalLink size={14} className="shrink-0" />
                     <span>Add website</span>
                   </button>
