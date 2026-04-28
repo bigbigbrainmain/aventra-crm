@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, AlertTriangle, Clock, TrendingUp, ChevronDown } from 'lucide-react';
+import { ArrowRight, AlertTriangle, Clock, TrendingUp, ChevronDown, X, PoundSterling } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, Cell,
@@ -16,6 +16,49 @@ const STATUS_COLORS = {
 };
 
 const FUNNEL_STAGES = ['New', 'Working', 'HOT', 'Booked', 'Closed Won'];
+
+const RANGE_OPTIONS = [
+  { label: 'Last 3 months',  value: 3  },
+  { label: 'Last 6 months',  value: 6  },
+  { label: 'Last 12 months', value: 12 },
+];
+
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function getLastNMonths(n) {
+  const months = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    months.push({
+      key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+    });
+  }
+  return months;
+}
+
+function getLeadMonth(lead) {
+  if (!lead.datePitched) return null;
+  const d = new Date(lead.datePitched);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseMonthlyFee(raw) {
+  if (!raw) return null;
+  const n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+function matchCustomer(lead, customers) {
+  return customers?.find(
+    c => c.businessName.toLowerCase().trim() === lead.businessName.toLowerCase().trim()
+  ) || null;
+}
+
+// ─── small components ────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color = 'text-slate-900', onClick }) {
   return (
@@ -38,49 +81,6 @@ function StatusBadge({ status }) {
     </span>
   );
 }
-
-function getLastNMonths(n) {
-  const months = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - i);
-    months.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      label: d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
-    });
-  }
-  return months;
-}
-
-function getLeadMonth(lead) {
-  if (!lead.datePitched) return null;
-  const d = new Date(lead.datePitched);
-  if (isNaN(d)) return null;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
-      <p className="font-semibold text-slate-700 mb-2">{label}</p>
-      {payload.map(p => (
-        <div key={p.dataKey} className="flex items-center gap-2 mb-0.5">
-          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: p.fill || p.color }} />
-          <span className="text-slate-600">{p.name}:</span>
-          <span className="font-medium text-slate-800">{p.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const RANGE_OPTIONS = [
-  { label: 'Last 3 months',  value: 3  },
-  { label: 'Last 6 months',  value: 6  },
-  { label: 'Last 12 months', value: 12 },
-];
 
 function TimelineDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
@@ -111,40 +111,165 @@ function TimelineDropdown({ value, onChange }) {
   );
 }
 
-export default function Dashboard({ leads, tasks, analytics, onSelectLead, setView }) {
-  const [closedWonRange, setClosedWonRange] = useState(6);
-  const [activityRange, setActivityRange] = useState(6);
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
+      <p className="font-semibold text-slate-700 mb-2">{label}</p>
+      {payload.map(p => (
+        <div key={p.dataKey} className="flex items-center gap-2 mb-0.5">
+          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: p.fill || p.color }} />
+          <span className="text-slate-600">{p.name}:</span>
+          <span className="font-medium text-slate-800">{p.value}</span>
+        </div>
+      ))}
+      <p className="text-slate-400 mt-2 italic">Click to see details</p>
+    </div>
+  );
+};
 
-  const todayTasks = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
-  const overdueTasks = tasks.filter(t => !t.completed && isOverdue(t.dueDate));
-  const recentLeads = [...leads].sort((a, b) => (b.id > a.id ? 1 : -1)).slice(0, 6);
-  const leadById = Object.fromEntries(leads.map(l => [l.id, l]));
+// ─── drilldown modal ─────────────────────────────────────────────────────────
+
+function DrilldownModal({ leads, customers, drilldown, onClose, onSelectLead }) {
+  if (!drilldown) return null;
+
+  const { monthLabel, monthKey, status } = drilldown;
+
+  const matchedLeads = leads.filter(
+    l => getLeadMonth(l) === monthKey && l.status === status
+  );
+
+  const leadsWithValues = matchedLeads.map(lead => {
+    const customer = matchCustomer(lead, customers);
+    const fee = parseMonthlyFee(customer?.monthlyFee);
+    return { ...lead, monthlyFee: fee, annualValue: fee !== null ? fee * 12 : null };
+  });
+
+  const totalAnnual = leadsWithValues.reduce((sum, l) => sum + (l.annualValue ?? 0), 0);
+  const hasValues = leadsWithValues.some(l => l.annualValue !== null);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* header */}
+        <div className="flex items-start justify-between p-5 border-b border-slate-100">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[status] }} />
+              <h3 className="font-semibold text-slate-900">{status}</h3>
+              <span className="text-slate-400 text-sm">·</span>
+              <span className="text-sm text-slate-500">{monthLabel}</span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              {matchedLeads.length} lead{matchedLeads.length !== 1 ? 's' : ''}
+              {hasValues && totalAnnual > 0 && (
+                <> · <span className="text-green-700 font-semibold">£{totalAnnual.toLocaleString()} total annual value</span></>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors ml-4 shrink-0"
+          >
+            <X size={15} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* list */}
+        <div className="p-3 overflow-y-auto max-h-[420px]">
+          {matchedLeads.length === 0 ? (
+            <p className="text-slate-400 text-sm text-center py-10">No leads for this period</p>
+          ) : (
+            <div className="space-y-2">
+              {leadsWithValues.map(lead => (
+                <button
+                  key={lead.id}
+                  onClick={() => { onSelectLead(lead); onClose(); }}
+                  className="w-full text-left p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/40 transition-colors group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                        {lead.businessName}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">{lead.industry} · {lead.city}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {lead.annualValue !== null ? (
+                        <>
+                          <p className="text-sm font-bold text-green-700">£{lead.annualValue.toLocaleString()}</p>
+                          <p className="text-xs text-slate-400">£{lead.monthlyFee}/mo × 12</p>
+                        </>
+                      ) : (
+                        <StatusBadge status={lead.status} />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* footer total */}
+        {hasValues && totalAnnual > 0 && (
+          <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <PoundSterling size={12} />
+              Total annual contract value
+            </div>
+            <p className="text-base font-bold text-green-700">£{totalAnnual.toLocaleString()}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── main dashboard ──────────────────────────────────────────────────────────
+
+export default function Dashboard({ leads, tasks, analytics, customers = [], onSelectLead, setView }) {
+  const [closedWonRange, setClosedWonRange] = useState(6);
+  const [activityRange, setActivityRange]   = useState(6);
+  const [drilldown, setDrilldown]           = useState(null);
+
+  const todayTasks    = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
+  const overdueTasks  = tasks.filter(t => !t.completed && isOverdue(t.dueDate));
+  const recentLeads   = [...leads].sort((a, b) => (b.id > a.id ? 1 : -1)).slice(0, 6);
+  const leadById      = Object.fromEntries(leads.map(l => [l.id, l]));
 
   const closedWonMonths = getLastNMonths(closedWonRange);
-  const activityMonths = getLastNMonths(activityRange);
+  const activityMonths  = getLastNMonths(activityRange);
 
-  // Stacked bar: leads pitched per month by status
   const pipelineActivity = activityMonths.map(m => {
-    const ml = leads.filter(l => getLeadMonth(l) === m.key);
-    const row = { month: m.label };
-    Object.keys(STATUS_COLORS).forEach(s => {
-      row[s] = ml.filter(l => l.status === s).length;
-    });
+    const ml  = leads.filter(l => getLeadMonth(l) === m.key);
+    const row = { month: m.label, monthKey: m.key };
+    Object.keys(STATUS_COLORS).forEach(s => { row[s] = ml.filter(l => l.status === s).length; });
     return row;
   });
 
-  // Simple bar: closed won per month
   const closedWonByMonth = closedWonMonths.map(m => ({
     month: m.label,
+    monthKey: m.key,
     'Closed Won': leads.filter(l => l.status === 'Closed Won' && getLeadMonth(l) === m.key).length,
   }));
 
-  // Funnel
   const totalLeads = analytics?.totalLeads || 1;
   const funnelData = FUNNEL_STAGES.map(s => {
     const count = analytics?.byStatus?.[s] || 0;
     return { stage: s, count, pct: Math.round((count / totalLeads) * 100) };
   });
+
+  const openDrilldown = (monthKey, monthLabel, status, count) => {
+    if (!count) return;
+    setDrilldown({ monthKey, monthLabel, status });
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -157,12 +282,12 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <StatCard label="Total Leads" value={analytics?.totalLeads || 0} onClick={() => setView('leads')} />
-        <StatCard label="New" value={analytics?.byStatus?.['New'] || 0} color="text-slate-500" onClick={() => setView('leads')} />
-        <StatCard label="Working" value={analytics?.byStatus?.['Working'] || 0} color="text-blue-600" onClick={() => setView('leads')} />
-        <StatCard label="HOT" value={analytics?.byStatus?.['HOT'] || 0} color="text-orange-600" onClick={() => setView('leads')} />
-        <StatCard label="Booked" value={analytics?.byStatus?.['Booked'] || 0} color="text-amber-600" onClick={() => setView('leads')} />
-        <StatCard label="Closed Won" value={analytics?.byStatus?.['Closed Won'] || 0} color="text-green-600" onClick={() => setView('leads')} />
+        <StatCard label="Total Leads"  value={analytics?.totalLeads || 0}                         onClick={() => setView('leads')} />
+        <StatCard label="New"          value={analytics?.byStatus?.['New'] || 0}        color="text-slate-500"  onClick={() => setView('leads')} />
+        <StatCard label="Working"      value={analytics?.byStatus?.['Working'] || 0}    color="text-blue-600"   onClick={() => setView('leads')} />
+        <StatCard label="HOT"          value={analytics?.byStatus?.['HOT'] || 0}        color="text-orange-600" onClick={() => setView('leads')} />
+        <StatCard label="Booked"       value={analytics?.byStatus?.['Booked'] || 0}     color="text-amber-600"  onClick={() => setView('leads')} />
+        <StatCard label="Closed Won"   value={analytics?.byStatus?.['Closed Won'] || 0} color="text-green-600"  onClick={() => setView('leads')} />
       </div>
 
       {/* Funnel + Closed Won by month */}
@@ -196,14 +321,19 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
             <h3 className="font-semibold text-slate-900">Closed Won by Month</h3>
             <TimelineDropdown value={closedWonRange} onChange={setClosedWonRange} />
           </div>
-          <p className="text-xs text-slate-400 mb-4">Based on date pitched</p>
+          <p className="text-xs text-slate-400 mb-4">Based on date pitched · click a bar for details</p>
           <ResponsiveContainer width="100%" height={190}>
             <BarChart data={closedWonByMonth} barSize={34} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-              <Bar dataKey="Closed Won" radius={[4, 4, 0, 0]}>
+              <Bar
+                dataKey="Closed Won"
+                radius={[4, 4, 0, 0]}
+                style={{ cursor: 'pointer' }}
+                onClick={d => openDrilldown(d.monthKey, d.month, 'Closed Won', d['Closed Won'])}
+              >
                 {closedWonByMonth.map((_, i) => <Cell key={i} fill="#4ade80" />)}
               </Bar>
             </BarChart>
@@ -211,13 +341,13 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
         </div>
       </div>
 
-      {/* Pipeline activity stacked bar */}
+      {/* Pipeline Activity stacked bar */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold text-slate-900">Pipeline Activity</h3>
           <TimelineDropdown value={activityRange} onChange={setActivityRange} />
         </div>
-        <p className="text-xs text-slate-400 mb-4">Leads pitched per month by current status</p>
+        <p className="text-xs text-slate-400 mb-4">Leads pitched per month by current status · click a segment for details</p>
         <ResponsiveContainer width="100%" height={230}>
           <BarChart data={pipelineActivity} barSize={40} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -232,6 +362,8 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
                 stackId="a"
                 fill={color}
                 radius={i === arr.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                style={{ cursor: 'pointer' }}
+                onClick={d => openDrilldown(d.monthKey, d.month, status, d[status])}
               />
             ))}
           </BarChart>
@@ -323,6 +455,15 @@ export default function Dashboard({ leads, tasks, analytics, onSelectLead, setVi
           )}
         </div>
       </div>
+
+      {/* Drilldown modal */}
+      <DrilldownModal
+        leads={leads}
+        customers={customers}
+        drilldown={drilldown}
+        onClose={() => setDrilldown(null)}
+        onSelectLead={onSelectLead}
+      />
     </div>
   );
 }
