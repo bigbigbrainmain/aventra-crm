@@ -24,6 +24,8 @@ function CRMApp() {
   const [deepLinkThread, setDeepLinkThread] = useState(null);
   const [showEnterLead, setShowEnterLead] = useState(false);
   const [customers, setCustomers] = useState([]);
+  const [addons, setAddons] = useState([]);
+  const [customerAddons, setCustomerAddons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,16 +50,20 @@ function CRMApp() {
     setLoading(true);
     setError(null);
     try {
-      const [leadsData, tasksData, analyticsData, customersData] = await Promise.all([
+      const [leadsData, tasksData, analyticsData, customersData, addonsData, customerAddonsData] = await Promise.all([
         api.getLeads(),
         api.getTasks(),
         api.getAnalytics(),
         api.getCustomers(),
+        api.getAddons(),
+        api.getCustomerAddons(),
       ]);
       setLeads(leadsData);
       setTasks(tasksData);
       setAnalytics(analyticsData);
       setCustomers(customersData);
+      setAddons(addonsData);
+      setCustomerAddons(customerAddonsData);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError(err.message);
@@ -158,6 +164,8 @@ function CRMApp() {
                 tasks={tasks}
                 analytics={analytics}
                 customers={customers}
+                addons={addons}
+                customerAddons={customerAddons}
                 onSelectLead={(lead) => setSelectedLead(lead)}
                 setView={setView}
               />

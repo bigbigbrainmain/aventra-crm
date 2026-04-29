@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, AlertTriangle, Clock, TrendingUp, ChevronDown, X, PoundSterling } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, Cell,
+  Legend, ResponsiveContainer, Cell, ComposedChart, Line,
 } from 'recharts';
 import { getStatusStyle, isDueToday, isOverdue } from '../utils/constants';
 
@@ -128,6 +128,85 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// ─── income chart helpers ────────────────────────────────────────────────────
+
+function getIncomeByMonth(months, customers, customerAddons, addonsMap) {
+  return months.map(m => {
+    const [y, mo] = m.key.split('-').map(Number);
+    const monthEnd   = new Date(y, mo, 0);   // last day of month
+    const monthStart = new Date(y, mo - 1, 1);
+
+    const baseMrr = customers
+      .filter(c => {
+        if (!c.goLiveDate) return true;
+        const d = new Date(c.goLiveDate);
+        return !isNaN(d) && d <= monthEnd;
+      })
+      .reduce((sum, c) => sum + (parseFloat(c.monthlyFee) || 0), 0);
+
+    const addonMrr = customerAddons
+      .filter(ca => {
+        if (!ca.startDate) return false;
+        const d = new Date(ca.startDate);
+        return !isNaN(d) && d <= monthEnd;
+      })
+      .reduce((sum, ca) => {
+        const catalog = addonsMap[ca.addonId] || {};
+        const fee = ca.customMonthlyFee !== ''
+          ? parseFloat(ca.customMonthlyFee) || 0
+          : parseFloat(catalog.monthlyFee) || 0;
+        return sum + fee;
+      }, 0);
+
+    const oneOff = customerAddons
+      .filter(ca => {
+        if (!ca.startDate) return false;
+        const d = new Date(ca.startDate);
+        return !isNaN(d) && d >= monthStart && d <= monthEnd;
+      })
+      .reduce((sum, ca) => {
+        const catalog = addonsMap[ca.addonId] || {};
+        const fee = ca.customOneOffFee !== ''
+          ? parseFloat(ca.customOneOffFee) || 0
+          : parseFloat(catalog.oneOffFee) || 0;
+        return sum + fee;
+      }, 0);
+
+    return {
+      month: m.label,
+      monthKey: m.key,
+      'Base MRR':     Math.round(baseMrr),
+      'Add-on MRR':   Math.round(addonMrr),
+      'One-off Fees': Math.round(oneOff),
+    };
+  });
+}
+
+function IncomeTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+      <p className="font-semibold text-slate-700 mb-2">{label}</p>
+      {payload.map(p => p.value > 0 && (
+        <div key={p.dataKey} className="flex items-center justify-between gap-4 mb-0.5">
+          <span className="flex items-center gap-1.5 text-slate-600">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.fill }} />
+            {p.name}
+          </span>
+          <span className="font-medium text-slate-800">£{p.value.toLocaleString()}</span>
+        </div>
+      ))}
+      {total > 0 && (
+        <div className="border-t border-slate-100 mt-2 pt-2 flex items-center justify-between">
+          <span className="text-slate-500 font-medium">Total</span>
+          <span className="font-bold text-slate-900">£{total.toLocaleString()}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── drilldown modal ─────────────────────────────────────────────────────────
 
 function DrilldownModal({ leads, customers, drilldown, onClose, onSelectLead }) {
@@ -234,9 +313,10 @@ function DrilldownModal({ leads, customers, drilldown, onClose, onSelectLead }) 
 
 // ─── main dashboard ──────────────────────────────────────────────────────────
 
-export default function Dashboard({ leads, tasks, analytics, customers = [], onSelectLead, setView }) {
+export default function Dashboard({ leads, tasks, analytics, customers = [], addons = [], customerAddons = [], onSelectLead, setView }) {
   const [closedWonRange, setClosedWonRange] = useState(6);
   const [activityRange, setActivityRange]   = useState(6);
+  const [incomeRange, setIncomeRange]       = useState(12);
   const [drilldown, setDrilldown]           = useState(null);
 
   const todayTasks    = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
@@ -271,6 +351,22 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], onS
     setDrilldown({ monthKey, monthLabel, status });
   };
 
+  const incomeMonths  = getLastNMonths(incomeRange);
+  const addonsMap     = Object.fromEntries(addons.map(a => [a.id, a]));
+  const incomeData    = getIncomeByMonth(incomeMonths, customers, customerAddons, addonsMap);
+  const hasIncomeData = incomeData.some(d => d['Base MRR'] > 0 || d['Add-on MRR'] > 0 || d['One-off Fees'] > 0);
+
+  const currentMrr = customers
+    .filter(c => c.status === 'Active')
+    .reduce((sum, c) => sum + (parseFloat(c.monthlyFee) || 0), 0)
+    + customerAddons.reduce((sum, ca) => {
+      const catalog = addonsMap[ca.addonId] || {};
+      const fee = ca.customMonthlyFee !== ''
+        ? parseFloat(ca.customMonthlyFee) || 0
+        : parseFloat(catalog.monthlyFee) || 0;
+      return sum + fee;
+    }, 0);
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -281,13 +377,14 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], onS
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
         <StatCard label="Total Leads"  value={analytics?.totalLeads || 0}                         onClick={() => setView('leads')} />
         <StatCard label="New"          value={analytics?.byStatus?.['New'] || 0}        color="text-slate-500"  onClick={() => setView('leads')} />
         <StatCard label="Working"      value={analytics?.byStatus?.['Working'] || 0}    color="text-blue-600"   onClick={() => setView('leads')} />
         <StatCard label="HOT"          value={analytics?.byStatus?.['HOT'] || 0}        color="text-orange-600" onClick={() => setView('leads')} />
         <StatCard label="Booked"       value={analytics?.byStatus?.['Booked'] || 0}     color="text-amber-600"  onClick={() => setView('leads')} />
         <StatCard label="Closed Won"   value={analytics?.byStatus?.['Closed Won'] || 0} color="text-green-600"  onClick={() => setView('leads')} />
+        <StatCard label="Total MRR"    value={currentMrr > 0 ? `£${currentMrr.toLocaleString()}` : '—'} color="text-emerald-600" onClick={() => setView('customers')} />
       </div>
 
       {/* Funnel + Closed Won by month */}
@@ -368,6 +465,40 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], onS
             ))}
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Monthly Income chart */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-slate-900">Monthly Income</h3>
+          <TimelineDropdown value={incomeRange} onChange={setIncomeRange} />
+        </div>
+        <p className="text-xs text-slate-400 mb-4">
+          Base MRR counted from customer go-live date · add-on MRR from link start date · one-off fees in the month they were linked
+        </p>
+        {!hasIncomeData ? (
+          <div className="flex items-center justify-center h-[200px] text-slate-300 text-sm">
+            No income data yet — add customers with go-live dates to see this chart
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={incomeData} barSize={32} margin={{ top: 4, right: 4, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={v => v >= 1000 ? `£${(v / 1000).toFixed(1)}k` : `£${v}`}
+              />
+              <Tooltip content={<IncomeTooltip />} cursor={{ fill: '#f8fafc' }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+              <Bar dataKey="Base MRR"     stackId="a" fill="#60a5fa" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="Add-on MRR"   stackId="a" fill="#a78bfa" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="One-off Fees" stackId="a" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Tasks + Recent Leads */}
