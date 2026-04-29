@@ -35,6 +35,8 @@ exports.handler = async (event) => {
     if (!existingTabs.includes('Notes')) toCreate.push('Notes');
     if (!existingTabs.includes('Tasks')) toCreate.push('Tasks');
     if (!existingTabs.includes('Live Customers')) toCreate.push('Live Customers');
+    if (!existingTabs.includes('Add-ons')) toCreate.push('Add-ons');
+    if (!existingTabs.includes('Customer Add-ons')) toCreate.push('Customer Add-ons');
 
     if (toCreate.length > 0) {
       await sheets.spreadsheets.batchUpdate({
@@ -67,6 +69,22 @@ exports.handler = async (event) => {
           range: 'Live Customers!A1:I1',
           valueInputOption: 'USER_ENTERED',
           requestBody: { values: [['ID', 'Business Name', 'Domain', 'Netlify URL', 'GitHub Folder', 'Go Live Date', 'Monthly Fee', 'Status', 'Notes']] },
+        }));
+      }
+      if (toCreate.includes('Add-ons')) {
+        headerUpdates.push(sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: 'Add-ons!A1:F1',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [['ID', 'Name', 'Description', 'One-off Fee', 'Monthly Fee', 'Active']] },
+        }));
+      }
+      if (toCreate.includes('Customer Add-ons')) {
+        headerUpdates.push(sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: 'Customer Add-ons!A1:G1',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [['ID', 'Customer ID', 'Addon ID', 'Custom Monthly Fee', 'Custom One-off Fee', 'Start Date', 'Notes']] },
         }));
       }
       await Promise.all(headerUpdates);
