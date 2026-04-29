@@ -1,4 +1,4 @@
-const { TABS, rowToCustomer, getRange, appendRow, genId } = require('./_sheets');
+const { TABS, rowToCustomerAddon, getRange, appendRow, genId } = require('./_sheets');
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -12,35 +12,38 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const rows = await getRange(TABS.CUSTOMERS, 'A2:J');
-      const customers = rows
-        .map((row, i) => rowToCustomer(row, i + 2))
-        .filter(c => c.id);
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(customers) };
+      const rows = await getRange(TABS.CUSTOMER_ADDONS, 'A2:G');
+      let records = rows
+        .map((row, i) => rowToCustomerAddon(row, i + 2))
+        .filter(r => r.id);
+
+      const customerId = (event.queryStringParameters || {}).customerId;
+      if (customerId) {
+        records = records.filter(r => r.customerId === customerId);
+      }
+
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(records) };
     }
 
     if (event.httpMethod === 'POST') {
       const data = JSON.parse(event.body || '{}');
-      const id = genId('C');
+      const id = genId('CA');
       const row = [
         id,
-        data.businessName || '',
-        data.domain || '',
-        data.netlifyUrl || '',
-        data.githubFolder || '',
-        data.goLiveDate || '',
-        data.monthlyFee || '',
-        data.status || 'Active',
+        data.customerId || '',
+        data.addonId || '',
+        data.customMonthlyFee || '',
+        data.customOneOffFee || '',
+        data.startDate || '',
         data.notes || '',
-        data.setupFee || '',
       ];
-      await appendRow(TABS.CUSTOMERS, row);
+      await appendRow(TABS.CUSTOMER_ADDONS, row);
       return { statusCode: 201, headers: HEADERS, body: JSON.stringify({ id }) };
     }
 
     return { statusCode: 405, headers: HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   } catch (err) {
-    console.error('customers error:', err);
+    console.error('customer-addons error:', err);
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
   }
 };

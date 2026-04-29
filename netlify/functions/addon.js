@@ -1,4 +1,4 @@
-const { TABS, rowToCustomer, getRange, updateRow, deleteRow } = require('./_sheets');
+const { TABS, rowToAddon, getRange, updateRow, deleteRow } = require('./_sheets');
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -7,11 +7,11 @@ const HEADERS = {
   'Access-Control-Allow-Methods': 'GET, PATCH, DELETE, OPTIONS',
 };
 
-async function findCustomer(customerId) {
-  const rows = await getRange(TABS.CUSTOMERS, 'A2:J');
+async function findAddon(addonId) {
+  const rows = await getRange(TABS.ADDONS, 'A2:F');
   for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][0]) === customerId) {
-      return { customer: rowToCustomer(rows[i], i + 2), rowNum: i + 2 };
+    if (String(rows[i][0]) === addonId) {
+      return { addon: rowToAddon(rows[i], i + 2), rowNum: i + 2 };
     }
   }
   return null;
@@ -20,49 +20,45 @@ async function findCustomer(customerId) {
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS, body: '' };
 
-  const customerId = (event.queryStringParameters || {}).id;
-  if (!customerId) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) };
+  const addonId = (event.queryStringParameters || {}).id;
+  if (!addonId) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) };
 
   try {
     if (event.httpMethod === 'GET') {
-      const result = await findCustomer(customerId);
+      const result = await findAddon(addonId);
       if (!result) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) };
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(result.customer) };
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(result.addon) };
     }
 
     if (event.httpMethod === 'PATCH') {
-      const result = await findCustomer(customerId);
+      const result = await findAddon(addonId);
       if (!result) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) };
 
       const updates = JSON.parse(event.body || '{}');
-      const updated = { ...result.customer, ...updates };
+      const updated = { ...result.addon, ...updates };
       const row = [
         updated.id,
-        updated.businessName,
-        updated.domain,
-        updated.netlifyUrl,
-        updated.githubFolder,
-        updated.goLiveDate,
+        updated.name,
+        updated.description,
+        updated.oneOffFee,
         updated.monthlyFee,
-        updated.status,
-        updated.notes,
-        updated.setupFee || '',
+        updated.active !== false ? 'TRUE' : 'FALSE',
       ];
-      await updateRow(TABS.CUSTOMERS, result.rowNum, row);
+      await updateRow(TABS.ADDONS, result.rowNum, row);
       const { _row, ...clean } = updated;
       return { statusCode: 200, headers: HEADERS, body: JSON.stringify(clean) };
     }
 
     if (event.httpMethod === 'DELETE') {
-      const result = await findCustomer(customerId);
+      const result = await findAddon(addonId);
       if (!result) return { statusCode: 404, headers: HEADERS, body: JSON.stringify({ error: 'Not found' }) };
-      await deleteRow(TABS.CUSTOMERS, result.rowNum);
+      await deleteRow(TABS.ADDONS, result.rowNum);
       return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true }) };
     }
 
     return { statusCode: 405, headers: HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   } catch (err) {
-    console.error('customer error:', err);
+    console.error('addon error:', err);
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
   }
 };

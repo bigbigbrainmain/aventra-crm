@@ -48,6 +48,18 @@ export const api = {
   updateDocument:  (id, data)   => req(`/document?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
   deleteDocument:  (id)         => req(`/document?id=${id}`,  { method: 'DELETE' }),
 
+  // Add-ons catalog
+  getAddons:           ()           => req('/addons'),
+  createAddon:         (data)       => req('/addons',                   { method: 'POST',   body: JSON.stringify(data) }),
+  updateAddon:         (id, data)   => req(`/addon?id=${id}`,           { method: 'PATCH',  body: JSON.stringify(data) }),
+  deleteAddon:         (id)         => req(`/addon?id=${id}`,           { method: 'DELETE' }),
+
+  // Customer add-ons
+  getCustomerAddons:   (customerId) => req(customerId ? `/customer-addons?customerId=${customerId}` : '/customer-addons'),
+  createCustomerAddon: (data)       => req('/customer-addons',          { method: 'POST',   body: JSON.stringify(data) }),
+  updateCustomerAddon: (id, data)   => req(`/customer-addon?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
+  deleteCustomerAddon: (id)         => req(`/customer-addon?id=${id}`,  { method: 'DELETE' }),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 

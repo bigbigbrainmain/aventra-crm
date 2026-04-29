@@ -8,6 +8,8 @@ const TABS = {
   TASKS: 'Tasks',
   CUSTOMERS: 'Live Customers',
   DOCUMENTS: 'Documents',
+  ADDONS: 'Add-ons',
+  CUSTOMER_ADDONS: 'Customer Add-ons',
 };
 
 function getClient() {
@@ -61,7 +63,7 @@ function rowToNote(row, rowNum) {
 }
 
 // Customer columns: A(0)=ID, B(1)=Business Name, C(2)=Domain, D(3)=Netlify URL,
-// E(4)=GitHub Folder, F(5)=Go Live Date, G(6)=Monthly Fee, H(7)=Status, I(8)=Notes
+// E(4)=GitHub Folder, F(5)=Go Live Date, G(6)=Monthly Fee, H(7)=Status, I(8)=Notes, J(9)=Setup Fee
 function rowToCustomer(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -73,6 +75,7 @@ function rowToCustomer(row, rowNum) {
     monthlyFee: String(row[6] || ''),
     status: String(row[7] || 'Active'),
     notes: String(row[8] || ''),
+    setupFee: String(row[9] || ''),
     _row: rowNum,
   };
 }
@@ -86,6 +89,33 @@ function rowToDocument(row, rowNum) {
     category: String(row[3] || 'General'),
     description: String(row[4] || ''),
     addedDate: String(row[5] || ''),
+    _row: rowNum,
+  };
+}
+
+// Addon columns: A(0)=ID, B(1)=Name, C(2)=Description, D(3)=One-off Fee, E(4)=Monthly Fee, F(5)=Active
+function rowToAddon(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    name: String(row[1] || ''),
+    description: String(row[2] || ''),
+    oneOffFee: String(row[3] || ''),
+    monthlyFee: String(row[4] || ''),
+    active: row[5] !== 'FALSE' && row[5] !== false,
+    _row: rowNum,
+  };
+}
+
+// CustomerAddon columns: A(0)=ID, B(1)=Customer ID, C(2)=Addon ID, D(3)=Custom Monthly Fee, E(4)=Custom One-off Fee, F(5)=Start Date, G(6)=Notes
+function rowToCustomerAddon(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    customerId: String(row[1] || ''),
+    addonId: String(row[2] || ''),
+    customMonthlyFee: String(row[3] || ''),
+    customOneOffFee: String(row[4] || ''),
+    startDate: String(row[5] || ''),
+    notes: String(row[6] || ''),
     _row: rowNum,
   };
 }
@@ -186,6 +216,8 @@ module.exports = {
   rowToTask,
   rowToCustomer,
   rowToDocument,
+  rowToAddon,
+  rowToCustomerAddon,
   getRange,
   appendRow,
   updateCell,

@@ -1,4 +1,4 @@
-const { TABS, rowToCustomer, getRange, appendRow, genId } = require('./_sheets');
+const { TABS, rowToAddon, getRange, appendRow, genId } = require('./_sheets');
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -12,35 +12,31 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const rows = await getRange(TABS.CUSTOMERS, 'A2:J');
-      const customers = rows
-        .map((row, i) => rowToCustomer(row, i + 2))
-        .filter(c => c.id);
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(customers) };
+      const rows = await getRange(TABS.ADDONS, 'A2:F');
+      const addons = rows
+        .map((row, i) => rowToAddon(row, i + 2))
+        .filter(a => a.id);
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(addons) };
     }
 
     if (event.httpMethod === 'POST') {
       const data = JSON.parse(event.body || '{}');
-      const id = genId('C');
+      const id = genId('AO');
       const row = [
         id,
-        data.businessName || '',
-        data.domain || '',
-        data.netlifyUrl || '',
-        data.githubFolder || '',
-        data.goLiveDate || '',
+        data.name || '',
+        data.description || '',
+        data.oneOffFee || '',
         data.monthlyFee || '',
-        data.status || 'Active',
-        data.notes || '',
-        data.setupFee || '',
+        data.active !== false ? 'TRUE' : 'FALSE',
       ];
-      await appendRow(TABS.CUSTOMERS, row);
+      await appendRow(TABS.ADDONS, row);
       return { statusCode: 201, headers: HEADERS, body: JSON.stringify({ id }) };
     }
 
     return { statusCode: 405, headers: HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   } catch (err) {
-    console.error('customers error:', err);
+    console.error('addons error:', err);
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
   }
 };
