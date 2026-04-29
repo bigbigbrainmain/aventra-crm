@@ -133,7 +133,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 function getIncomeByMonth(months, customers, customerAddons, addonsMap) {
   return months.map(m => {
     const [y, mo] = m.key.split('-').map(Number);
-    const monthEnd   = new Date(y, mo, 0);   // last day of month
+    const monthEnd   = new Date(y, mo, 0);    // last day of month
     const monthStart = new Date(y, mo - 1, 1);
 
     const baseMrr = customers
@@ -158,7 +158,8 @@ function getIncomeByMonth(months, customers, customerAddons, addonsMap) {
         return sum + fee;
       }, 0);
 
-    const oneOff = customerAddons
+    // Add-on one-off fees: charged in the month the add-on was linked
+    const addonOneOff = customerAddons
       .filter(ca => {
         if (!ca.startDate) return false;
         const d = new Date(ca.startDate);
@@ -172,12 +173,21 @@ function getIncomeByMonth(months, customers, customerAddons, addonsMap) {
         return sum + fee;
       }, 0);
 
+    // Customer setup fees: charged in the go-live month
+    const setupOneOff = customers
+      .filter(c => {
+        if (!c.goLiveDate || !c.setupFee) return false;
+        const d = new Date(c.goLiveDate);
+        return !isNaN(d) && d >= monthStart && d <= monthEnd;
+      })
+      .reduce((sum, c) => sum + (parseFloat(c.setupFee) || 0), 0);
+
     return {
       month: m.label,
       monthKey: m.key,
       'Base MRR':     Math.round(baseMrr),
       'Add-on MRR':   Math.round(addonMrr),
-      'One-off Fees': Math.round(oneOff),
+      'One-off Fees': Math.round(addonOneOff + setupOneOff),
     };
   });
 }
@@ -474,7 +484,7 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
           <TimelineDropdown value={incomeRange} onChange={setIncomeRange} />
         </div>
         <p className="text-xs text-slate-400 mb-4">
-          Base MRR counted from customer go-live date · add-on MRR from link start date · one-off fees in the month they were linked
+          Base MRR from customer go-live date · add-on MRR from link start date · one-off fees include setup charges and add-on setup fees
         </p>
         {!hasIncomeData ? (
           <div className="flex items-center justify-center h-[200px] text-slate-300 text-sm">

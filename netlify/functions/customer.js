@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findCustomer(customerId) {
-  const rows = await getRange(TABS.CUSTOMERS, 'A2:I');
+  const rows = await getRange(TABS.CUSTOMERS, 'A2:J');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === customerId) {
       return { customer: rowToCustomer(rows[i], i + 2), rowNum: i + 2 };
@@ -46,6 +46,7 @@ exports.handler = async (event) => {
         updated.monthlyFee,
         updated.status,
         updated.notes,
+        updated.setupFee || '',
       ];
       await updateRow(TABS.CUSTOMERS, result.rowNum, row);
       const { _row, ...clean } = updated;

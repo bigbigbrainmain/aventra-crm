@@ -12,7 +12,7 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const rows = await getRange(TABS.CUSTOMERS, 'A2:I');
+      const rows = await getRange(TABS.CUSTOMERS, 'A2:J');
       const customers = rows
         .map((row, i) => rowToCustomer(row, i + 2))
         .filter(c => c.id);
@@ -32,6 +32,7 @@ exports.handler = async (event) => {
         data.monthlyFee || '',
         data.status || 'Active',
         data.notes || '',
+        data.setupFee || '',
       ];
       await appendRow(TABS.CUSTOMERS, row);
       return { statusCode: 201, headers: HEADERS, body: JSON.stringify({ id }) };

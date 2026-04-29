@@ -63,7 +63,7 @@ function rowToNote(row, rowNum) {
 }
 
 // Customer columns: A(0)=ID, B(1)=Business Name, C(2)=Domain, D(3)=Netlify URL,
-// E(4)=GitHub Folder, F(5)=Go Live Date, G(6)=Monthly Fee, H(7)=Status, I(8)=Notes
+// E(4)=GitHub Folder, F(5)=Go Live Date, G(6)=Monthly Fee, H(7)=Status, I(8)=Notes, J(9)=Setup Fee
 function rowToCustomer(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -75,6 +75,7 @@ function rowToCustomer(row, rowNum) {
     monthlyFee: String(row[6] || ''),
     status: String(row[7] || 'Active'),
     notes: String(row[8] || ''),
+    setupFee: String(row[9] || ''),
     _row: rowNum,
   };
 }

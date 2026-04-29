@@ -68,7 +68,7 @@ exports.handler = async (event) => {
           spreadsheetId: SHEET_ID,
           range: 'Live Customers!A1:I1',
           valueInputOption: 'USER_ENTERED',
-          requestBody: { values: [['ID', 'Business Name', 'Domain', 'Netlify URL', 'GitHub Folder', 'Go Live Date', 'Monthly Fee', 'Status', 'Notes']] },
+          requestBody: { values: [['ID', 'Business Name', 'Domain', 'Netlify URL', 'GitHub Folder', 'Go Live Date', 'Monthly Fee', 'Status', 'Notes', 'Setup Fee']] },
         }));
       }
       if (toCreate.includes('Add-ons')) {

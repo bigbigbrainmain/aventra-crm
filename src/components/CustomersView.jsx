@@ -13,7 +13,7 @@ const STATUS_STYLE = {
 
 const EMPTY_FORM = {
   businessName: '', domain: '', netlifyUrl: '', githubFolder: '',
-  goLiveDate: '', monthlyFee: '', status: 'Active', notes: '',
+  goLiveDate: '', monthlyFee: '', setupFee: '', status: 'Active', notes: '',
 };
 
 function StatusBadge({ status }) {
@@ -82,6 +82,16 @@ function CustomerModal({ customer, onClose, onSave }) {
                 onChange={e => set('monthlyFee', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="150"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Setup Fee (£)</label>
+              <input
+                value={form.setupFee}
+                onChange={e => set('setupFee', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="500"
               />
             </div>
 
@@ -611,6 +621,7 @@ export default function CustomersView() {
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Business</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Domain</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Setup</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Monthly</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Add-ons</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Go Live</th>
@@ -637,6 +648,11 @@ export default function CustomersView() {
                           {c.domain.replace(/^https?:\/\//, '')}
                         </a>
                       ) : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {c.setupFee
+                        ? <span className="text-slate-600">£{c.setupFee}</span>
+                        : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-5 py-3.5">
                       {c.monthlyFee
