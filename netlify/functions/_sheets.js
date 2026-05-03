@@ -27,7 +27,8 @@ function getClient() {
 // A(0)=ID, B(1)=Business Name, C(2)=Industry, D(3)=City, E(4)=Email,
 // F(5)=Phone, G(6)=Website, H(7)=Priority, I(8)=Priority Reason,
 // J(9)=Status, K(10)=Date Pitched, L(11)=Notes, M(12)=Subject,
-// N(13)=Email Body, O(14)=Calendly Link Sent, P(15)=Is Favourite
+// N(13)=Email Body, O(14)=Calendly Link Sent, P(15)=Is Favourite,
+// Q(16)=Proposal URL, R(17)=Proposal Folder
 function rowToLead(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -46,6 +47,8 @@ function rowToLead(row, rowNum) {
     emailBody: String(row[13] || ''),
     calendlyLinkSent: String(row[14] || 'No'),
     isFavourite: row[15] === 'TRUE' || row[15] === true,
+    proposalUrl: String(row[16] || ''),
+    proposalFolder: String(row[17] || ''),
     _row: rowNum,
   };
 }
@@ -142,7 +145,6 @@ async function getRange(tab, range) {
     });
     return res.data.values || [];
   } catch (err) {
-    // Tab doesn't exist yet — return empty
     if (err.code === 400 || (err.message && err.message.includes('Unable to parse range'))) {
       return [];
     }

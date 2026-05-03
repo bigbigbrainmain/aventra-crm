@@ -2,6 +2,7 @@ export const STATUSES = [
   'New',
   'Working',
   'HOT',
+  'Proposal Requested',
   'Booked',
   'Lost',
   'Qualified Out',
@@ -11,13 +12,14 @@ export const STATUSES = [
 ];
 
 export const STATUS_CONFIG = {
-  'New':           { bg: 'bg-slate-100',  text: 'text-slate-600',  dot: 'bg-slate-400'  },
-  'Working':       { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
-  'HOT':           { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
-  'Booked':        { bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500'  },
-  'Lost':          { bg: 'bg-red-100',    text: 'text-red-600',    dot: 'bg-red-400'    },
-  'Qualified Out': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
-  'Closed Won':    { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
+  'New':                   { bg: 'bg-slate-100',  text: 'text-slate-600',  dot: 'bg-slate-400'  },
+  'Working':               { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
+  'HOT':                   { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
+  'Proposal Requested':    { bg: 'bg-indigo-100', text: 'text-indigo-700', dot: 'bg-indigo-500' },
+  'Booked':                { bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500'  },
+  'Lost':                  { bg: 'bg-red-100',    text: 'text-red-600',    dot: 'bg-red-400'    },
+  'Qualified Out':         { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+  'Closed Won':            { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
   'NRTB':                  { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
   'Incorrect Product Fit': { bg: 'bg-rose-100',   text: 'text-rose-700',  dot: 'bg-rose-500'   },
 };

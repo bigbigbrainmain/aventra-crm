@@ -48,6 +48,9 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [showEmail, setShowEmail] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
+  const [availableFolders, setAvailableFolders] = useState([]);
+  const [folderInput, setFolderInput] = useState(lead.proposalFolder || '');
+  const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
 
   const loadNotesAndTasks = useCallback(async () => {
     const [n, t] = await Promise.all([
@@ -61,6 +64,14 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   useEffect(() => {
     loadNotesAndTasks();
   }, [loadNotesAndTasks]);
+
+  useEffect(() => {
+    api.getProposalFolders().then(setAvailableFolders).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setFolderInput(lead.proposalFolder || '');
+  }, [lead.id]);
 
   // Status change — auto-save
   const handleStatusChange = async (newStatus) => {
@@ -82,6 +93,19 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     } catch (err) {
       console.error(err);
       onUpdate(lead);
+    }
+  };
+
+  // Save proposal folder link
+  const handleFolderSave = async (value) => {
+    if (value === (lead.proposalFolder || '')) return;
+    onUpdate({ ...lead, proposalFolder: value });
+    try {
+      await api.updateLead(lead.id, { proposalFolder: value });
+    } catch (err) {
+      console.error(err);
+      onUpdate(lead);
+      setFolderInput(lead.proposalFolder || '');
     }
   };
 
@@ -197,6 +221,10 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
       setSaving(false);
     }
   };
+
+  const filteredFolders = availableFolders.filter(f =>
+    f.toLowerCase().includes(folderInput.toLowerCase())
+  );
 
   const incompleteTasks = tasks.filter(t => !t.completed);
   const completedTasks  = tasks.filter(t => t.completed);
@@ -397,6 +425,70 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                 placeholder="One-line note saved to the sheet..."
                 className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
               />
+            </div>
+          </Section>
+
+          {/* Proposal */}
+          <Section title="Proposal">
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-slate-400 mb-1">Linked Folder</p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={folderInput}
+                    onChange={e => { setFolderInput(e.target.value); setFolderDropdownOpen(true); }}
+                    onFocus={() => setFolderDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => { setFolderDropdownOpen(false); handleFolderSave(folderInput); }, 150)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { handleFolderSave(folderInput); setFolderDropdownOpen(false); e.target.blur(); }
+                      if (e.key === 'Escape') { setFolderDropdownOpen(false); setFolderInput(lead.proposalFolder || ''); e.target.blur(); }
+                    }}
+                    placeholder="Select or type folder name..."
+                    className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                  {folderDropdownOpen && (filteredFolders.length > 0 || folderInput) && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredFolders.map(folder => (
+                        <button
+                          key={folder}
+                          type="button"
+                          onMouseDown={() => { setFolderInput(folder); setFolderDropdownOpen(false); handleFolderSave(folder); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
+                            folder === folderInput ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'
+                          }`}
+                        >
+                          {folder}
+                        </button>
+                      ))}
+                      {filteredFolders.length === 0 && folderInput && (
+                        <div className="px-3 py-2 text-xs text-slate-400">
+                          No match — press Enter to save "{folderInput}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 mb-1">Live URL</p>
+                {lead.proposalUrl ? (
+                  <a
+                    href={lead.proposalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <ExternalLink size={14} className="text-slate-400 shrink-0" />
+                    <span className="truncate">{lead.proposalUrl}</span>
+                  </a>
+                ) : (
+                  <p className="flex items-center gap-2 text-sm text-slate-300">
+                    <ExternalLink size={14} className="shrink-0" />
+                    Not deployed yet
+                  </p>
+                )}
+              </div>
             </div>
           </Section>
 
