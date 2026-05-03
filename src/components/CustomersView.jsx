@@ -406,7 +406,6 @@ function CustomerAddonsModal({ customer, addons, customerAddons, onClose, onRefr
                 >
                   <option value="">Select an add-on...</option>
                   {availableAddons
-                    .filter(a => !linked.some(ca => ca.addonId === a.id))
                     .map(a => (
                       <option key={a.id} value={a.id}>
                         {a.name}
@@ -491,12 +490,12 @@ function CustomerAddonsModal({ customer, addons, customerAddons, onClose, onRefr
           {!showLinkForm && !editingId && (
             <button
               onClick={() => { setShowLinkForm(true); setEditingId(null); }}
-              disabled={availableAddons.filter(a => !linked.some(ca => ca.addonId === a.id)).length === 0}
+              disabled={availableAddons.length === 0}
               className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
             >
               <PlusCircle size={14} />
-              {availableAddons.filter(a => !linked.some(ca => ca.addonId === a.id)).length === 0
-                ? 'All add-ons already linked'
+              {availableAddons.length === 0
+                ? 'No active add-ons available'
                 : 'Link an add-on'}
             </button>
           )}
