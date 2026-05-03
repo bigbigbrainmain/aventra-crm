@@ -405,15 +405,9 @@ function CustomerAddonsModal({ customer, addons, customerAddons, onClose, onRefr
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">Select an add-on...</option>
-                  {availableAddons
-                    .map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                        {a.monthlyFee ? ` — £${a.monthlyFee}/mo` : ''}
-                        {a.oneOffFee ? ` + £${a.oneOffFee} setup` : ''}
-                      </option>
-                    ))
-                  }
+                  {availableAddons.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
                 </select>
               </div>
               {linkForm.addonId && (() => {
