@@ -60,6 +60,9 @@ export const api = {
   updateCustomerAddon: (id, data)   => req(`/customer-addon?id=${id}`,  { method: 'PATCH',  body: JSON.stringify(data) }),
   deleteCustomerAddon: (id)         => req(`/customer-addon?id=${id}`,  { method: 'DELETE' }),
 
+  // Proposal folders (from aventra-proposals repo)
+  getProposalFolders: ()            => req('/proposal-folders'),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 
