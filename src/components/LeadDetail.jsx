@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   X, Mail, Phone, ExternalLink, Tag, Calendar,
   Plus, Check, Trash2, AlertCircle, ChevronDown,
-  Star, Pencil, Maximize2, Minimize2,
+  Star, Pencil, Maximize2, Minimize2, UserCheck,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
@@ -51,6 +51,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [availableFolders, setAvailableFolders] = useState([]);
   const [folderInput, setFolderInput] = useState(lead.proposalFolder || '');
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
+  const [graduateModal, setGraduateModal] = useState(false);
 
   const loadNotesAndTasks = useCallback(async () => {
     const [n, t] = await Promise.all([
@@ -230,8 +231,21 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const completedTasks  = tasks.filter(t => t.completed);
   const priorityCfg = getPriorityStyle(lead.priority);
 
+  const handleGraduate = async (formData) => {
+    await api.graduateProposal({ leadId: lead.id, folderName: lead.proposalFolder, ...formData });
+    onUpdate({ ...lead, status: 'Won' });
+    setGraduateModal(false);
+  };
+
   return (
     <>
+      {graduateModal && (
+        <GraduateModal
+          lead={lead}
+          onClose={() => setGraduateModal(false)}
+          onConfirm={handleGraduate}
+        />
+      )}
       {/* Overlay — only in expanded mode; small mode keeps background interactive */}
       {expanded && <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40" onClick={onClose} />}
 
@@ -489,6 +503,15 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                   </p>
                 )}
               </div>
+              {lead.proposalFolder && (
+                <button
+                  onClick={() => setGraduateModal(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                >
+                  <UserCheck size={13} />
+                  Convert to Live Customer
+                </button>
+              )}
             </div>
           </Section>
 
@@ -660,6 +683,146 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
         </div>
       </div>
     </>
+  );
+}
+
+function GraduateModal({ lead, onClose, onConfirm }) {
+  const [form, setForm] = useState({
+    businessName: lead.businessName || '',
+    domain: '',
+    monthlyFee: '',
+    setupFee: '',
+    goLiveDate: '',
+    notes: '',
+    removeFromProposals: true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const previewUrl = `https://aventra-${lead.proposalFolder}.netlify.app`;
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await onConfirm(form);
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <h3 className="font-semibold text-slate-900">Convert to Live Customer</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Moves <span className="font-medium text-slate-600">{lead.proposalFolder}</span> to live sites and creates a customer record
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4 overflow-y-auto">
+          <div className="bg-slate-50 rounded-lg px-4 py-3 text-xs text-slate-500 space-y-1">
+            <p><span className="font-medium text-slate-700">Proposal folder:</span> {lead.proposalFolder}</p>
+            <p><span className="font-medium text-slate-700">Will deploy to:</span> <span className="text-blue-600">{previewUrl}</span></p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Business Name *</label>
+              <input
+                value={form.businessName}
+                onChange={e => set('businessName', e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Custom Domain</label>
+              <input
+                value={form.domain}
+                onChange={e => set('domain', e.target.value)}
+                placeholder="e.g. acmeplumbing.co.uk"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-slate-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Monthly Fee (£)</label>
+              <input
+                type="number"
+                value={form.monthlyFee}
+                onChange={e => set('monthlyFee', e.target.value)}
+                placeholder="49"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-slate-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Setup Fee (£)</label>
+              <input
+                type="number"
+                value={form.setupFee}
+                onChange={e => set('setupFee', e.target.value)}
+                placeholder="500"
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-slate-300"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Go Live Date</label>
+              <input
+                type="date"
+                value={form.goLiveDate}
+                onChange={e => set('goLiveDate', e.target.value)}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-500 mb-1">Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={e => set('notes', e.target.value)}
+                rows={2}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.removeFromProposals}
+                  onChange={e => set('removeFromProposals', e.target.checked)}
+                  className="w-4 h-4 rounded accent-green-600"
+                />
+                <span className="text-sm text-slate-600">Remove folder from proposals repo after moving</span>
+              </label>
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
+          <button
+            onClick={handleConfirm}
+            disabled={saving || !form.businessName.trim()}
+            className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? 'Converting...' : 'Convert to Customer'}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2.5 text-slate-500 hover:bg-slate-100 text-sm rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

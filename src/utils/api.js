@@ -63,6 +63,9 @@ export const api = {
   // Proposal folders (from aventra-proposals repo)
   getProposalFolders: ()            => req('/proposal-folders'),
 
+  // Graduate proposal → live customer
+  graduateProposal: (data)          => req('/proposal-graduate', { method: 'POST', body: JSON.stringify(data) }),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 
