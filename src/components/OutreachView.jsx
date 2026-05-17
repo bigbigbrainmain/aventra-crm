@@ -3,6 +3,7 @@ import { Search, Mail, Phone, CheckCircle, XCircle, Clock, Filter, PhoneCall, Al
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 
 const PRIORITY_ORDER = { '🔴 Priority 1': 0, '🟠 Priority 2': 1, '🟡 Priority 3': 2, '🟢 Skip': 3 };
+const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit']);
 
 function daysSince(iso) {
   if (!iso) return 0;
@@ -55,7 +56,7 @@ export default function OutreachView({ leads, onSelectLead, filterLeadId, onClea
     priorityFilter === 'all' || lead.priority === priorityFilter;
 
   const queue = leads
-    .filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount)
+    .filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status))
     .filter(matchSearch)
     .filter(matchPriority)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
