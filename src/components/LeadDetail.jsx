@@ -1,13 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   X, Mail, Phone, ExternalLink, Tag, Calendar,
   Plus, Check, Trash2, AlertCircle, ChevronDown,
-  Star, Pencil, Maximize2, Minimize2, UserCheck,
+  ChevronRight, Star, Pencil, Maximize2, Minimize2, UserCheck,
   Loader2, SendHorizontal,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
 import ChatSection from './ChatSection';
+
+const FROM_LABELS = {
+  dashboard: 'Dashboard',
+  tasks: 'Tasks',
+  outreach: 'Outreach',
+};
 
 function Section({ title, children, action }) {
   return (
@@ -37,7 +44,14 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId, expanded, onToggleExpand, onViewInOutreach }) {
+export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, expanded, onToggleExpand }) {
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const [searchParams] = useSearchParams();
+  const focusThreadId = searchParams.get('thread');
+  const fromKey = state?.from;
+  const fromLabel = FROM_LABELS[fromKey] ?? 'All Leads';
+  const fromPath = FROM_LABELS[fromKey] ? `/${fromKey}` : '/leads';
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -307,6 +321,17 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0 flex-1">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1 text-xs text-slate-400 mb-2">
+              <button
+                onClick={() => navigate(fromPath)}
+                className="hover:text-blue-600 transition-colors"
+              >
+                {fromLabel}
+              </button>
+              <ChevronRight size={10} className="shrink-0" />
+              <span className="text-slate-500 font-medium truncate">{lead.businessName}</span>
+            </nav>
             {editing ? (
               <input
                 autoFocus
@@ -570,8 +595,8 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
           {/* Outreach */}
           <Section
             title="Outreach Email"
-            action={lead.outreachCount > 0 && onViewInOutreach ? (
-              <button onClick={onViewInOutreach} className="text-xs text-blue-600 hover:text-blue-700">
+            action={lead.outreachCount > 0 ? (
+              <button onClick={() => navigate(`/outreach?lead=${lead.id}`)} className="text-xs text-blue-600 hover:text-blue-700">
                 View history →
               </button>
             ) : null}
