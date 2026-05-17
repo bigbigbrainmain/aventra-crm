@@ -19,20 +19,50 @@ async function findLead(leadId) {
 
 async function generatePitch(lead) {
   const hasWebsite = lead.website && lead.website.trim() !== '';
-  const prompt = `Write a short cold outreach email from Joe at Aventra, a UK web design agency.
+  const isFollowUp = lead.outreachCount > 0;
+
+  const context = [
+    `- Business name: ${lead.businessName}`,
+    `- Industry: ${lead.industry || 'unknown'}`,
+    `- City: ${lead.city || 'unknown'}`,
+    `- Email: ${lead.email || 'unknown'}`,
+    `- Phone: ${lead.phone || 'none on file'}`,
+    `- Website: ${hasWebsite ? lead.website : 'None — they have no website'}`,
+    `- Priority: ${lead.priority || 'not set'}`,
+    `- Status: ${lead.status || 'New'}`,
+    `- Date pitched: ${lead.datePitched || 'not yet'}`,
+    `- Calendly link sent: ${lead.calendlyLinkSent || 'No'}`,
+    lead.notes ? `- Notes: ${lead.notes}` : null,
+    lead.priorityReason ? `- Priority reason: ${lead.priorityReason}` : null,
+  ].filter(Boolean).join('\n');
+
+  const prompt = isFollowUp
+    ? `Write a short follow-up email from Joe at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
 
 Lead details:
-- Business: ${lead.businessName}
-- Industry: ${lead.industry}
-- City: ${lead.city}
-- Has website: ${hasWebsite ? `Yes (${lead.website})` : 'No'}${lead.notes ? `\n- Notes: ${lead.notes}` : ''}
+${context}
+
+Rules:
+- Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
+- Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
+- End with the same low-pressure ask as before (free mockup, or happy to send ideas)
+- Sign off as just "Joe" then "Aventra" on next line
+- NO marketing speak, NO exclamation marks, NO templates
+
+Return ONLY valid JSON in this exact format, nothing else:
+{"subject": "...", "body": "..."}`
+    : `Write a short cold outreach email from Joe at Aventra, a UK web design agency.
+
+Lead details:
+${context}
 
 Rules:
 - Subject line: curiosity-driven, no exclamation marks, not salesy, under 10 words
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
-- If no website: lead with that pain point (missing enquiries)
-- If has website: mention you noticed a couple of ideas to help them get more local work
+- If they have no website: lead with that pain point (they're missing enquiries from people searching online)
+- If they have a website: mention you spotted a couple of ideas to help them get more local work
+- If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
 - End with a tiny low-pressure ask (free mockup, or happy to send ideas)
 - Sign off as just "Joe" then "Aventra" on next line
 - NO unsubscribe links, NO marketing speak, NO exclamation marks
