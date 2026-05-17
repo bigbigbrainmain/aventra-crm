@@ -71,4 +71,8 @@ export const api = {
 
   // Email usage
   getEmailUsage: ()         => req('/email-usage'),
+
+  // Outreach
+  generateOutreach: (leadId) => req('/generate-outreach', { method: 'POST', body: JSON.stringify({ leadId }) }),
+  sendOutreach:     (leadId) => req('/send-outreach',     { method: 'POST', body: JSON.stringify({ leadId }) }),
 };

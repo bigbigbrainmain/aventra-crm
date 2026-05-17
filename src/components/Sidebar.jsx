@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal } from 'lucide-react';
 import { api } from '../utils/api';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard',      Icon: LayoutDashboard },
   { id: 'leads',     label: 'All Leads',      Icon: Users            },
+  { id: 'outreach',  label: 'Outreach',       Icon: SendHorizontal   },
   { id: 'customers', label: 'Live Customers', Icon: Globe            },
   { id: 'addons',    label: 'Add-ons',        Icon: Package          },
   { id: 'tasks',     label: 'Tasks',          Icon: CheckSquare      },

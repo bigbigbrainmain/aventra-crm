@@ -7,6 +7,7 @@ import ContractsView from './components/ContractsView';
 import CustomersView from './components/CustomersView';
 import DocumentsView from './components/DocumentsView';
 import AddonsView from './components/AddonsView';
+import OutreachView from './components/OutreachView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import LoginScreen from './components/LoginScreen';
@@ -28,6 +29,7 @@ function CRMApp() {
   const [customerAddons, setCustomerAddons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [outreachFilterLead, setOutreachFilterLead] = useState(null);
 
   const handleToggleFavourite = useCallback(async (leadId) => {
     const lead = leads.find(l => l.id === leadId);
@@ -186,6 +188,14 @@ function CRMApp() {
                 onSelectLead={(lead) => setSelectedLead(lead)}
               />
             )}
+            {view === 'outreach'  && (
+              <OutreachView
+                leads={leads}
+                onSelectLead={(lead) => setSelectedLead(lead)}
+                filterLeadId={outreachFilterLead}
+                onClearFilter={() => setOutreachFilterLead(null)}
+              />
+            )}
             {view === 'contracts' && <ContractsView />}
             {view === 'customers' && <CustomersView />}
             {view === 'addons'    && <AddonsView />}
@@ -215,6 +225,10 @@ function CRMApp() {
           focusThreadId={deepLinkThread}
           expanded={detailExpanded}
           onToggleExpand={() => setDetailExpanded(v => !v)}
+          onViewInOutreach={() => {
+            setOutreachFilterLead(selectedLead.id);
+            setView('outreach');
+          }}
         />
       )}
     </div>

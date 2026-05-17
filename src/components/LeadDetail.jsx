@@ -3,6 +3,7 @@ import {
   X, Mail, Phone, ExternalLink, Tag, Calendar,
   Plus, Check, Trash2, AlertCircle, ChevronDown,
   Star, Pencil, Maximize2, Minimize2, UserCheck,
+  Loader2, SendHorizontal,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
@@ -36,7 +37,7 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId, expanded, onToggleExpand }) {
+export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId, expanded, onToggleExpand, onViewInOutreach }) {
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -45,8 +46,13 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [addingNote, setAddingNote] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showEmail, setShowEmail] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [draftSubject, setDraftSubject] = useState(lead.subject || '');
+  const [draftBody, setDraftBody] = useState(lead.emailBody || '');
+  const [outreachGenerating, setOutreachGenerating] = useState(false);
+  const [outreachSending, setOutreachSending] = useState(false);
+  const [outreachSent, setOutreachSent] = useState(false);
+  const [outreachError, setOutreachError] = useState('');
   const [draft, setDraft] = useState({});
   const [availableFolders, setAvailableFolders] = useState([]);
   const [folderInput, setFolderInput] = useState(lead.proposalFolder || '');
@@ -72,6 +78,10 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
 
   useEffect(() => {
     setFolderInput(lead.proposalFolder || '');
+    setDraftSubject(lead.subject || '');
+    setDraftBody(lead.emailBody || '');
+    setOutreachSent(false);
+    setOutreachError('');
   }, [lead.id]);
 
   // Status change — auto-save
@@ -220,6 +230,48 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
       alert('Failed to delete: ' + err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleGenerateOutreach = async () => {
+    setOutreachGenerating(true);
+    setOutreachError('');
+    try {
+      const pitch = await api.generateOutreach(lead.id);
+      setDraftSubject(pitch.subject);
+      setDraftBody(pitch.body);
+      onUpdate({ ...lead, subject: pitch.subject, emailBody: pitch.body });
+    } catch (err) {
+      setOutreachError(err.message);
+    } finally {
+      setOutreachGenerating(false);
+    }
+  };
+
+  const handleSendOutreach = async () => {
+    if (!confirm(`Send outreach email to ${lead.email}?`)) return;
+    setOutreachSending(true);
+    setOutreachError('');
+    try {
+      if (draftSubject !== lead.subject || draftBody !== lead.emailBody) {
+        await api.updateLead(lead.id, { subject: draftSubject, emailBody: draftBody });
+        onUpdate({ ...lead, subject: draftSubject, emailBody: draftBody });
+      }
+      const result = await api.sendOutreach(lead.id);
+      const now = new Date().toISOString();
+      onUpdate({
+        ...lead,
+        subject: draftSubject,
+        emailBody: draftBody,
+        outreachSentAt: lead.outreachSentAt || now,
+        outreachCount: result.outreachCount,
+        lastOutreachAt: now,
+      });
+      setOutreachSent(true);
+    } catch (err) {
+      setOutreachError(err.message);
+    } finally {
+      setOutreachSending(false);
     }
   };
 
@@ -515,39 +567,97 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
             </div>
           </Section>
 
-          {/* Email from scripts */}
-          {(lead.subject || lead.emailBody) && (
-            <Section
-              title="Outreach Email"
-              action={
-                <button onClick={() => setShowEmail(v => !v)} className="text-xs text-blue-600 hover:text-blue-700">
-                  {showEmail ? 'Hide' : 'Show'}
-                </button>
-              }
-            >
-              {showEmail && (
-                <div className="bg-slate-50 rounded-lg p-3 space-y-2">
-                  {lead.subject && (
+          {/* Outreach */}
+          <Section
+            title="Outreach Email"
+            action={lead.outreachCount > 0 && onViewInOutreach ? (
+              <button onClick={onViewInOutreach} className="text-xs text-blue-600 hover:text-blue-700">
+                View history →
+              </button>
+            ) : null}
+          >
+            {lead.outreachOptedOut === 'Yes' && (
+              <p className="text-xs text-red-500 bg-red-50 border border-red-100 px-3 py-2 rounded-lg mb-3">
+                This lead has opted out of outreach emails.
+              </p>
+            )}
+            {!lead.email && lead.outreachOptedOut !== 'Yes' && (
+              <button onClick={startEdit} className="text-xs text-slate-400 hover:text-blue-500 transition-colors">
+                Add an email address to enable outreach →
+              </button>
+            )}
+            {lead.email && lead.outreachOptedOut !== 'Yes' && (
+              <div className="space-y-3">
+                {lead.outreachCount > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-slate-500">Sent {lead.outreachCount}× · last {timeAgo(lead.lastOutreachAt)}</span>
+                    {lead.emailOpenedAt ? (
+                      <span className="text-xs text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full font-medium">
+                        Opened {timeAgo(lead.emailOpenedAt)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Not opened</span>
+                    )}
+                  </div>
+                )}
+                {(draftSubject || draftBody) ? (
+                  <div className="space-y-2">
                     <div>
-                      <p className="text-xs font-medium text-slate-400 mb-0.5">Subject</p>
-                      <p className="text-sm text-slate-700">{lead.subject}</p>
+                      <p className="text-xs text-slate-400 mb-1">Subject</p>
+                      <input
+                        value={draftSubject}
+                        onChange={e => setDraftSubject(e.target.value)}
+                        className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
-                  )}
-                  {lead.emailBody && (
                     <div>
-                      <p className="text-xs font-medium text-slate-400 mb-0.5">Body</p>
-                      <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">{lead.emailBody}</p>
+                      <p className="text-xs text-slate-400 mb-1">Body</p>
+                      <textarea
+                        value={draftBody}
+                        onChange={e => setDraftBody(e.target.value)}
+                        rows={6}
+                        className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     </div>
-                  )}
-                </div>
-              )}
-              {!showEmail && (
-                <p className="text-xs text-slate-400">
-                  {lead.subject ? `"${lead.subject}"` : 'Email drafted by script'}
-                </p>
-              )}
-            </Section>
-          )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSendOutreach}
+                        disabled={outreachSending || !draftSubject.trim() || !draftBody.trim()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {outreachSending ? <><Loader2 size={11} className="animate-spin" />Sending...</> :
+                         outreachSent   ? <><Check size={11} />Sent!</> :
+                                          <><SendHorizontal size={11} />Send Email</>}
+                      </button>
+                      <button
+                        onClick={handleGenerateOutreach}
+                        disabled={outreachGenerating}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 text-xs font-medium rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {outreachGenerating ? <><Loader2 size={11} className="animate-spin" />Generating...</> : 'Regenerate'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={handleGenerateOutreach}
+                      disabled={outreachGenerating || !lead.industry || !lead.city}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {outreachGenerating ? <><Loader2 size={11} className="animate-spin" />Generating...</> : 'Generate AI Pitch'}
+                    </button>
+                    {(!lead.industry || !lead.city) && (
+                      <p className="text-xs text-slate-400">Industry and city are required.</p>
+                    )}
+                  </div>
+                )}
+                {outreachError && (
+                  <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{outreachError}</p>
+                )}
+              </div>
+            )}
+          </Section>
 
           {/* Notes */}
           <Section title={`Notes (${notes.length})`}>

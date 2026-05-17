@@ -38,10 +38,19 @@ exports.handler = async (event) => {
     if (!lead.subject || !lead.emailBody) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Generate an AI pitch first' }) };
 
     const unsubUrl = `https://aventra-crm.netlify.app/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
-    const html = `<p style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.6; white-space: pre-wrap;">${lead.emailBody}</p>
-<p style="font-family: Arial, sans-serif; font-size: 11px; color: #999; margin-top: 40px;">
+    const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
+<p style="white-space: pre-wrap; margin: 0 0 24px 0;">${lead.emailBody}</p>
+<p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
+  --<br>
+  Joe Clacher<br>
+  Co-Founder &amp; CTO<br>
+  +447710988228<br>
+  <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
+</p>
+<p style="font-size: 11px; color: #999; margin: 0;">
   <a href="${unsubUrl}" style="color: #999;">Unsubscribe</a>
-</p>`;
+</p>
+</div>`;
 
     const apiKey = process.env.RESEND_API_KEY || 're_BmJGYvCk_NRHFtQr2WAd3ZRfDsUvm1iFi';
     const res = await fetch('https://api.resend.com/emails', {
