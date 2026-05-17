@@ -11,7 +11,7 @@ async function findLead(leadId) {
 }
 
 async function handleOpened(data) {
-  const leadId = (data.tags || []).find(t => t.name === 'leadId')?.value;
+  const leadId = data.tags?.leadId;
   if (!leadId) return;
 
   const result = await findLead(leadId);
