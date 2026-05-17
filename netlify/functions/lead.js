@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findLead(leadId) {
-  const rows = await getRange(TABS.LEADS, 'A2:R');
+  const rows = await getRange(TABS.LEADS, 'A2:W');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === leadId) {
       return { lead: rowToLead(rows[i], i + 2), rowNum: i + 2 };
@@ -96,6 +96,11 @@ exports.handler = async (event) => {
         updated.isFavourite ? 'TRUE' : 'FALSE',
         updated.proposalUrl || '',
         updated.proposalFolder || '',
+        updated.outreachSentAt || '',
+        updated.outreachCount || 0,
+        updated.lastOutreachAt || '',
+        updated.emailOpenedAt || '',
+        updated.outreachOptedOut || '',
       ];
       await updateRow(TABS.LEADS, result.rowNum, row);
 

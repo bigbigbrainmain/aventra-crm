@@ -12,7 +12,7 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const rows = await getRange(TABS.LEADS, 'A2:R');
+      const rows = await getRange(TABS.LEADS, 'A2:W');
       const leads = rows
         .map((row, i) => rowToLead(row, i + 2))
         .filter(l => l.id);

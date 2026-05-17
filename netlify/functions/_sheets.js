@@ -28,7 +28,9 @@ function getClient() {
 // F(5)=Phone, G(6)=Website, H(7)=Priority, I(8)=Priority Reason,
 // J(9)=Status, K(10)=Date Pitched, L(11)=Notes, M(12)=Subject,
 // N(13)=Email Body, O(14)=Calendly Link Sent, P(15)=Is Favourite,
-// Q(16)=Proposal URL, R(17)=Proposal Folder
+// Q(16)=Proposal URL, R(17)=Proposal Folder,
+// S(18)=outreachSentAt, T(19)=outreachCount, U(20)=lastOutreachAt,
+// V(21)=emailOpenedAt, W(22)=outreachOptedOut
 function rowToLead(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -49,6 +51,11 @@ function rowToLead(row, rowNum) {
     isFavourite: row[15] === 'TRUE' || row[15] === true,
     proposalUrl: String(row[16] || ''),
     proposalFolder: String(row[17] || ''),
+    outreachSentAt: String(row[18] || ''),
+    outreachCount: Number(row[19]) || 0,
+    lastOutreachAt: String(row[20] || ''),
+    emailOpenedAt: String(row[21] || ''),
+    outreachOptedOut: String(row[22] || ''),
     _row: rowNum,
   };
 }
@@ -210,6 +217,16 @@ function genId(prefix) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
+async function updateRange(tab, startCell, values) {
+  const sheets = getClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${tab}!${startCell}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [values] },
+  });
+}
+
 module.exports = {
   SHEET_ID,
   TABS,
@@ -225,5 +242,6 @@ module.exports = {
   updateCell,
   updateRow,
   deleteRow,
+  updateRange,
   genId,
 };
