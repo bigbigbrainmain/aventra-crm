@@ -22,7 +22,7 @@ function parseMentions(body) {
 }
 
 async function sendMentionEmails(mentions, fromName, entityName, messageBody, threadId, entityId) {
-  const deepLink = `${window.location.origin}/#lead=${entityId}&thread=${threadId}`;
+  const deepLink = `${window.location.origin}/leads/${entityId}?thread=${threadId}`;
   for (const member of mentions) {
     try {
       await fetch('/.netlify/functions/mention', {

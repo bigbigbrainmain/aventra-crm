@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useNavigate, useMatch } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import LeadsView from './components/LeadsView';
@@ -16,37 +17,25 @@ import { api } from './utils/api';
 
 function CRMApp() {
   const { user } = useAuth();
-  const [view, setView] = useState('dashboard');
+  const navigate = useNavigate();
+
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [analytics, setAnalytics] = useState(null);
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [detailExpanded, setDetailExpanded] = useState(false);
-  const [deepLinkThread, setDeepLinkThread] = useState(null);
-  const [showEnterLead, setShowEnterLead] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [addons, setAddons] = useState([]);
   const [customerAddons, setCustomerAddons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [outreachFilterLead, setOutreachFilterLead] = useState(null);
+  const [showEnterLead, setShowEnterLead] = useState(false);
+  const [panelExpanded, setPanelExpanded] = useState(false);
 
-  const handleToggleFavourite = useCallback(async (leadId) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (!lead) return;
-    const newValue = !lead.isFavourite;
-    const apply = (val) => {
-      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, isFavourite: val } : l));
-      setSelectedLead(prev => prev?.id === leadId ? { ...prev, isFavourite: val } : prev);
-    };
-    apply(newValue);
-    try {
-      await api.updateLead(leadId, { isFavourite: newValue });
-    } catch (err) {
-      console.error(err);
-      apply(!newValue);
-    }
-  }, [leads]);
+  const leadMatch = useMatch('/leads/:leadId');
+  const selectedLead = leadMatch ? (leads.find(l => l.id === leadMatch.params.leadId) ?? null) : null;
+
+  useEffect(() => {
+    if (!leadMatch) setPanelExpanded(false);
+  }, [leadMatch]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,37 +68,31 @@ function CRMApp() {
     loadData();
   }, [loadData, user]);
 
-  // Deep-link: read hash after leads load, e.g. /#lead=lead_123&thread=abc
-  useEffect(() => {
-    if (!leads.length) return;
-    const hash = window.location.hash;
-    if (!hash) return;
-    const params = new URLSearchParams(hash.slice(1));
-    const leadId = params.get('lead');
-    const threadId = params.get('thread');
-    if (leadId) {
-      const lead = leads.find(l => l.id === leadId);
-      if (lead) {
-        setView('leads');
-        setSelectedLead(lead);
-        if (threadId) setDeepLinkThread(threadId);
-        window.history.replaceState(null, '', window.location.pathname);
-      }
+  const handleToggleFavourite = useCallback(async (leadId) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const newValue = !lead.isFavourite;
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, isFavourite: newValue } : l));
+    try {
+      await api.updateLead(leadId, { isFavourite: newValue });
+    } catch (err) {
+      console.error(err);
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, isFavourite: !newValue } : l));
     }
   }, [leads]);
 
   const handleLeadUpdate = useCallback((updatedLead) => {
     setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
-    setSelectedLead(updatedLead);
   }, []);
 
   const handleLeadDelete = useCallback((leadId) => {
     setLeads(prev => prev.filter(l => l.id !== leadId));
-    setSelectedLead(null);
-    loadData(); // refresh analytics
-  }, [loadData]);
+    navigate('/leads');
+    loadData();
+  }, [loadData, navigate]);
 
-  // user === undefined means auth is still initialising
+  const selectLead = (lead, from) => navigate(`/leads/${lead.id}`, { state: { from } });
+
   if (user === undefined) return (
     <div className="flex items-center justify-center h-screen bg-slate-50">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -120,8 +103,6 @@ function CRMApp() {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
-        view={view}
-        setView={setView}
         analytics={analytics}
         onEnterLead={() => setShowEnterLead(true)}
         onSetup={async () => {
@@ -134,7 +115,7 @@ function CRMApp() {
         }}
       />
 
-      <main className={`flex-1 overflow-y-auto scrollbar-thin transition-all duration-200 ${selectedLead && !detailExpanded ? 'pr-[32rem]' : ''}`}>
+      <main className={`flex-1 overflow-y-auto scrollbar-thin transition-all duration-200 ${selectedLead && !panelExpanded ? 'pr-[32rem]' : ''}`}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -159,8 +140,9 @@ function CRMApp() {
             </div>
           </div>
         ) : (
-          <>
-            {view === 'dashboard' && (
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={
               <Dashboard
                 leads={leads}
                 tasks={tasks}
@@ -168,39 +150,45 @@ function CRMApp() {
                 customers={customers}
                 addons={addons}
                 customerAddons={customerAddons}
-                onSelectLead={(lead) => setSelectedLead(lead)}
-                setView={setView}
+                onSelectLead={(lead) => selectLead(lead, 'dashboard')}
+                setView={(id) => navigate(`/${id}`)}
               />
-            )}
-            {view === 'leads' && (
+            } />
+            <Route path="/leads" element={
               <LeadsView
                 leads={leads}
-                onSelectLead={(lead) => setSelectedLead(lead)}
+                onSelectLead={(lead) => selectLead(lead, 'leads')}
                 onRefresh={loadData}
                 onToggleFavourite={handleToggleFavourite}
               />
-            )}
-            {view === 'tasks' && (
+            } />
+            <Route path="/leads/:leadId" element={
+              <LeadsView
+                leads={leads}
+                onSelectLead={(lead) => selectLead(lead, 'leads')}
+                onRefresh={loadData}
+                onToggleFavourite={handleToggleFavourite}
+              />
+            } />
+            <Route path="/tasks" element={
               <TasksView
                 tasks={tasks}
                 leads={leads}
                 onTaskUpdate={loadData}
-                onSelectLead={(lead) => setSelectedLead(lead)}
+                onSelectLead={(lead) => selectLead(lead, 'tasks')}
               />
-            )}
-            {view === 'outreach'  && (
+            } />
+            <Route path="/outreach" element={
               <OutreachView
                 leads={leads}
-                onSelectLead={(lead) => setSelectedLead(lead)}
-                filterLeadId={outreachFilterLead}
-                onClearFilter={() => setOutreachFilterLead(null)}
+                onSelectLead={(lead) => selectLead(lead, 'outreach')}
               />
-            )}
-            {view === 'contracts' && <ContractsView />}
-            {view === 'customers' && <CustomersView />}
-            {view === 'addons'    && <AddonsView />}
-            {view === 'documents' && <DocumentsView />}
-          </>
+            } />
+            <Route path="/contracts" element={<ContractsView />} />
+            <Route path="/customers" element={<CustomersView />} />
+            <Route path="/addons" element={<AddonsView />} />
+            <Route path="/documents" element={<DocumentsView />} />
+          </Routes>
         )}
       </main>
 
@@ -217,18 +205,13 @@ function CRMApp() {
       {selectedLead && (
         <LeadDetail
           lead={selectedLead}
-          onClose={() => { setSelectedLead(null); setDeepLinkThread(null); setDetailExpanded(false); }}
+          onClose={() => navigate('/leads')}
           onUpdate={handleLeadUpdate}
           onDelete={handleLeadDelete}
           onTasksChange={loadData}
           onToggleFavourite={handleToggleFavourite}
-          focusThreadId={deepLinkThread}
-          expanded={detailExpanded}
-          onToggleExpand={() => setDetailExpanded(v => !v)}
-          onViewInOutreach={() => {
-            setOutreachFilterLead(selectedLead.id);
-            setView('outreach');
-          }}
+          expanded={panelExpanded}
+          onToggleExpand={() => setPanelExpanded(v => !v)}
         />
       )}
     </div>

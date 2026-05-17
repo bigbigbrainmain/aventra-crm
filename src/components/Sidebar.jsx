@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal } from 'lucide-react';
 import { api } from '../utils/api';
 
@@ -13,7 +14,9 @@ const NAV = [
   { id: 'documents', label: 'Internal Docs',  Icon: BookOpen         },
 ];
 
-export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead }) {
+export default function Sidebar({ analytics, onSetup, onEnterLead }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const overdueCount = analytics?.overdueTasksCount || 0;
   const todayCount   = analytics?.todayTasksCount   || 0;
 
@@ -69,11 +72,11 @@ export default function Sidebar({ view, setView, analytics, onSetup, onEnterLead
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto scrollbar-thin">
         {NAV.map(({ id, label, Icon }) => {
-          const active = view === id;
+          const active = pathname === `/${id}` || (id === 'leads' && pathname.startsWith('/leads/'));
           return (
             <button
               key={id}
-              onClick={() => setView(id)}
+              onClick={() => navigate(`/${id}`)}
               className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium transition-colors
                 ${active
                   ? 'bg-blue-600 text-white'

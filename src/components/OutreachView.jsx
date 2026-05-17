@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Mail, Phone, CheckCircle, XCircle, Clock, Filter, PhoneCall, AlertCircle } from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 
@@ -37,8 +38,15 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function OutreachView({ leads, onSelectLead, filterLeadId, onClearFilter }) {
+export default function OutreachView({ leads, onSelectLead }) {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const filterLeadId = searchParams.get('lead');
   const [tab, setTab] = useState(filterLeadId ? 'sent' : 'queue');
+
+  useEffect(() => {
+    if (filterLeadId) setTab('sent');
+  }, [filterLeadId]);
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [openedFilter, setOpenedFilter] = useState('all');
@@ -87,7 +95,7 @@ export default function OutreachView({ leads, onSelectLead, filterLeadId, onClea
           <div className="mt-3 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
             <Filter size={13} className="text-blue-500 shrink-0" />
             <span className="text-sm text-blue-700 font-medium">{filteredLead.businessName}</span>
-            <button onClick={onClearFilter} className="ml-auto text-xs text-blue-500 hover:text-blue-700 transition-colors">
+            <button onClick={() => navigate('/outreach')} className="ml-auto text-xs text-blue-500 hover:text-blue-700 transition-colors">
               Clear filter
             </button>
           </div>
