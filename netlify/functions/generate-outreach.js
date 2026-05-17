@@ -25,7 +25,7 @@ Lead details:
 - Business: ${lead.businessName}
 - Industry: ${lead.industry}
 - City: ${lead.city}
-- Has website: ${hasWebsite ? `Yes (${lead.website})` : 'No'}
+- Has website: ${hasWebsite ? `Yes (${lead.website})` : 'No'}${lead.notes ? `\n- Notes: ${lead.notes}` : ''}
 
 Rules:
 - Subject line: curiosity-driven, no exclamation marks, not salesy, under 10 words

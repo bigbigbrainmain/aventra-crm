@@ -289,7 +289,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
         {/* Clear all */}
         {anyFilter && (
           <button
-            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); updateHiddenStatuses([]); setSearch(''); }}
+            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); updateHiddenStatuses(['Lost']); setSearch(''); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Clear all
