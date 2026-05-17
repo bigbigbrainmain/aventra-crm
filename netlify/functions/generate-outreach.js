@@ -60,7 +60,7 @@ Return ONLY valid JSON in this exact format, nothing else:
   }
 
   const data = await res.json();
-  const text = data.content[0].text.trim();
+  const text = data.content[0].text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
   return JSON.parse(text);
 }
 
