@@ -8,6 +8,7 @@ import {
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
 import ChatSection from './ChatSection';
+import { useUserSettings } from '../hooks/useUserSettings';
 
 function Section({ title, children, action }) {
   return (
@@ -38,6 +39,7 @@ function StatusSelect({ value, onChange }) {
 }
 
 export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksChange, onToggleFavourite, focusThreadId, expanded, onToggleExpand, onViewInOutreach }) {
+  const { getSignature } = useUserSettings();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -237,10 +239,11 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     setOutreachGenerating(true);
     setOutreachError('');
     try {
-      const pitch = await api.generateOutreach(lead.id);
+      const [pitch, sig] = await Promise.all([api.generateOutreach(lead.id), getSignature()]);
+      const body = sig ? `${pitch.body}\n\n${sig}` : pitch.body;
       setDraftSubject(pitch.subject);
-      setDraftBody(pitch.body);
-      onUpdate({ ...lead, subject: pitch.subject, emailBody: pitch.body });
+      setDraftBody(body);
+      onUpdate({ ...lead, subject: pitch.subject, emailBody: body });
     } catch (err) {
       setOutreachError(err.message);
     } finally {

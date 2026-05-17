@@ -19,7 +19,7 @@ async function findLead(leadId) {
 
 async function generatePitch(lead) {
   const hasWebsite = lead.website && lead.website.trim() !== '';
-  const prompt = `Write a short cold outreach email from Joe at Aventra, a UK web design agency.
+  const prompt = `Write a short cold outreach email for Aventra, a UK web design agency.
 
 Lead details:
 - Business: ${lead.businessName}
@@ -34,7 +34,7 @@ Rules:
 - If no website: lead with that pain point (missing enquiries)
 - If has website: mention you noticed a couple of ideas to help them get more local work
 - End with a tiny low-pressure ask (free mockup, or happy to send ideas)
-- Sign off as just "Joe" then "Aventra" on next line
+- Do NOT include any sign-off or signature — that is added separately
 - NO unsubscribe links, NO marketing speak, NO exclamation marks
 
 Return ONLY valid JSON in this exact format, nothing else:
