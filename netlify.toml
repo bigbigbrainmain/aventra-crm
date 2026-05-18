@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions."auto-followup"]
+  schedule = "0 8 * * *"
+
 [dev]
   command = "npm run dev"
   port = 8888
