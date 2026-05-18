@@ -16,6 +16,7 @@ async function generateFollowUpPitch(lead) {
     `- Industry: ${lead.industry}`,
     `- City: ${lead.city}`,
     `- Website: ${hasWebsite ? lead.website : 'None — they have no website'}`,
+    lead.primaryContact ? `- Primary contact: ${lead.primaryContact}` : null,
     lead.notes ? `- Notes: ${lead.notes}` : null,
   ].filter(Boolean).join('\n');
 
@@ -26,6 +27,7 @@ ${context}
 
 Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
+- Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
 - Sign off as just "Ollie" then "Aventra" on next line
@@ -98,7 +100,7 @@ async function sendSummaryEmail(names) {
 
 exports.handler = async () => {
   try {
-    const rows = await getRange(TABS.LEADS, 'A2:W');
+    const rows = await getRange(TABS.LEADS, 'A2:X');
     const allLeads = rows.map((row, i) => rowToLead(row, i + 2));
 
     const candidates = allLeads.filter(lead =>

@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findLead(leadId) {
-  const rows = await getRange(TABS.LEADS, 'A2:W');
+  const rows = await getRange(TABS.LEADS, 'A2:X');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === leadId) {
       return { lead: rowToLead(rows[i], i + 2), rowNum: i + 2 };
@@ -32,6 +32,7 @@ async function generatePitch(lead) {
     `- Status: ${lead.status || 'New'}`,
     `- Date pitched: ${lead.datePitched || 'not yet'}`,
     `- Calendly link sent: ${lead.calendlyLinkSent || 'No'}`,
+    lead.primaryContact ? `- Primary contact: ${lead.primaryContact}` : null,
     lead.notes ? `- Notes: ${lead.notes}` : null,
     lead.priorityReason ? `- Priority reason: ${lead.priorityReason}` : null,
   ].filter(Boolean).join('\n');
@@ -44,7 +45,7 @@ ${context}
 
 Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
-- Start with just the lead's first name and a comma (e.g. "John,") — no "Hi", no "Hey"
+- Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
 - Close with "Best regards," on its own line before the sign-off
@@ -60,7 +61,7 @@ ${context}
 
 Rules:
 - Subject line: curiosity-driven, no exclamation marks, not salesy, under 10 words
-- Start with just the lead's first name and a comma (e.g. "John,") — no "Hi", no "Hey"
+- Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
 - If they have no website: lead with that pain point (they're missing enquiries from people searching online)

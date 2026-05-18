@@ -155,12 +155,13 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   // Edit entire lead
   const startEdit = () => {
     setDraft({
-      businessName: lead.businessName,
-      industry:     lead.industry,
-      city:         lead.city,
-      email:        lead.email,
-      phone:        lead.phone,
-      website:      lead.website,
+      businessName:   lead.businessName,
+      industry:       lead.industry,
+      city:           lead.city,
+      email:          lead.email,
+      primaryContact: lead.primaryContact,
+      phone:          lead.phone,
+      website:        lead.website,
     });
     setEditing(true);
   };
@@ -464,6 +465,15 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                   />
                 </div>
                 <div className="flex items-center gap-2">
+                  <UserCheck size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    value={draft.primaryContact}
+                    onChange={e => setDraft(d => ({ ...d, primaryContact: e.target.value }))}
+                    placeholder="Primary Contact"
+                    className="flex-1 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
                   <Phone size={14} className="text-slate-400 shrink-0" />
                   <input
                     type="tel"
@@ -509,6 +519,17 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                   <button onClick={startEdit} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
                     <Mail size={14} className="shrink-0" />
                     <span>Add email</span>
+                  </button>
+                )}
+                {lead.primaryContact ? (
+                  <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                    <UserCheck size={14} className="text-slate-400 shrink-0" />
+                    <span>{lead.primaryContact}</span>
+                  </div>
+                ) : (
+                  <button onClick={startEdit} className="flex items-center gap-2.5 text-sm text-slate-300 hover:text-blue-500 transition-colors">
+                    <UserCheck size={14} className="shrink-0" />
+                    <span>Add primary contact</span>
                   </button>
                 )}
                 {lead.phone ? (

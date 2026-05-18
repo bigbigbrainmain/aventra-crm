@@ -12,6 +12,7 @@ const EMPTY = {
   industry: '',
   status: 'New',
   email: '',
+  primaryContact: '',
   website: '',
   priorityReason: '',
   datePitched: '',
@@ -132,10 +133,11 @@ export default function EnterLeadModal({ onClose, onSave }) {
             {field('Industry', 'industry', 'text', true)}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="pt-2">
             {field('Email', 'email', 'email')}
-            {field('Website', 'website', 'url')}
           </div>
+          {field('Primary Contact', 'primaryContact')}
+          {field('Website', 'website', 'url')}
 
           {field('Date Pitched', 'datePitched', 'date')}
 

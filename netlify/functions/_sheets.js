@@ -31,7 +31,7 @@ function getClient() {
 // N(13)=Email Body, O(14)=Calendly Link Sent, P(15)=Is Favourite,
 // Q(16)=Proposal URL, R(17)=Proposal Folder,
 // S(18)=outreachSentAt, T(19)=outreachCount, U(20)=lastOutreachAt,
-// V(21)=emailOpenedAt, W(22)=outreachOptedOut
+// V(21)=emailOpenedAt, W(22)=outreachOptedOut, X(23)=primaryContact
 function rowToLead(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -57,6 +57,7 @@ function rowToLead(row, rowNum) {
     lastOutreachAt: String(row[20] || ''),
     emailOpenedAt: String(row[21] || ''),
     outreachOptedOut: String(row[22] || ''),
+    primaryContact: String(row[23] || ''),
     _row: rowNum,
   };
 }
