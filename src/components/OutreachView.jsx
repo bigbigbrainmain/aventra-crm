@@ -3,13 +3,14 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search, Mail, Phone, CheckCircle, XCircle, Clock,
   Filter, PhoneCall, AlertCircle, Loader2, Check,
-  SendHorizontal, X, ChevronLeft, Sparkles,
+  SendHorizontal, Sparkles, ChevronLeft, RefreshCw,
 } from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 import { api } from '../utils/api';
 
 const PRIORITY_ORDER = { '🔴 Priority 1': 0, '🟠 Priority 2': 1, '🟡 Priority 3': 2, '🟢 Skip': 3 };
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit']);
+const FOLLOWUP_DAYS = 5;
 
 function daysSince(iso) {
   if (!iso) return 0;
@@ -43,7 +44,52 @@ function StatusBadge({ status }) {
   );
 }
 
-function BulkLeadCard({ lead, state, onUpdate, onApprove, onSkip, onRetry }) {
+function QueueCard({ lead, onSelect, isFollowUp }) {
+  const p = getPriorityStyle(lead.priority);
+  return (
+    <button
+      onClick={() => onSelect(lead)}
+      className="w-full text-left bg-white border border-slate-200 rounded-xl px-4 py-3.5 hover:border-blue-300 hover:shadow-sm transition-all"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <PriorityPip priority={lead.priority} />
+            <p className="text-sm font-semibold text-slate-800 truncate">{lead.businessName}</p>
+            {isFollowUp && (
+              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                Follow-up
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</p>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            {lead.email && (
+              <span className="text-xs text-slate-400 flex items-center gap-1">
+                <Mail size={11} />{lead.email}
+              </span>
+            )}
+            {lead.phone && (
+              <span className="text-xs text-slate-400 flex items-center gap-1">
+                <Phone size={11} />{lead.phone}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <StatusBadge status={lead.status} />
+          {p && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
+              {p.label}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function BulkLeadCard({ lead, isFollowUp, state, onUpdate, onApprove, onSkip, onRetry }) {
   const { status, subject, body, error } = state;
   const p = getPriorityStyle(lead.priority);
 
@@ -56,11 +102,15 @@ function BulkLeadCard({ lead, state, onUpdate, onApprove, onSkip, onRetry }) {
 
   return (
     <div className={`bg-white border rounded-xl p-4 transition-all ${borderCls}`}>
-      {/* Lead info row */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <PriorityPip priority={lead.priority} />
         <span className="text-sm font-semibold text-slate-800">{lead.businessName}</span>
         <span className="text-xs text-slate-400">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</span>
+        {isFollowUp && (
+          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium">
+            Follow-up
+          </span>
+        )}
         {p && (
           <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
             {p.label}
@@ -103,10 +153,7 @@ function BulkLeadCard({ lead, state, onUpdate, onApprove, onSkip, onRetry }) {
                   <Check size={13} />
                   Approved
                 </span>
-                <button
-                  onClick={onSkip}
-                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors ml-1"
-                >
+                <button onClick={onSkip} className="text-xs text-slate-400 hover:text-slate-600 transition-colors ml-1">
                   Undo
                 </button>
               </>
@@ -167,7 +214,6 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [openedFilter, setOpenedFilter] = useState('all');
 
-  // Bulk generate/review state
   const [bulkMode, setBulkMode] = useState(false);
   const [pitchState, setPitchState] = useState({});
   const [isSending, setIsSending] = useState(false);
@@ -200,14 +246,28 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     .filter(matchPriority)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
 
+  const followups = leads
+    .filter(l =>
+      l.outreachCount === 1 &&
+      !l.emailOpenedAt &&
+      l.outreachOptedOut !== 'Yes' &&
+      !DEAD_STATUSES.has(l.status) &&
+      daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS
+    )
+    .filter(matchSearch)
+    .filter(matchPriority)
+    .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
+
+  const allQueue = [...queue, ...followups];
+
   const sent = leads
     .filter(l => l.outreachCount > 0)
     .filter(l => filterLeadId ? l.id === filterLeadId : true)
     .filter(matchSearch)
     .filter(matchPriority)
     .filter(l => {
-      if (openedFilter === 'opened')    return !!l.emailOpenedAt;
-      if (openedFilter === 'unopened')  return !l.emailOpenedAt;
+      if (openedFilter === 'opened')   return !!l.emailOpenedAt;
+      if (openedFilter === 'unopened') return !l.emailOpenedAt;
       return true;
     })
     .sort((a, b) => new Date(b.lastOutreachAt || 0) - new Date(a.lastOutreachAt || 0));
@@ -215,16 +275,17 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const filteredLead = filterLeadId ? leads.find(l => l.id === filterLeadId) : null;
   const hotLeads = sent.filter(l => l.emailOpenedAt && daysSince(l.emailOpenedAt) <= 2);
 
-  // Bulk mode derived values
   const generatedCount = Object.values(pitchState).filter(s => s.status !== 'generating').length;
   const totalCount = Object.keys(pitchState).length;
   const approvedCount = Object.values(pitchState).filter(s => s.status === 'approved').length;
   const allGenerated = totalCount > 0 && generatedCount === totalCount;
 
+  const isFollowUpLead = (lead) => lead.outreachCount > 0;
+
   const handleGenerateAll = async () => {
     setBulkMode(true);
     const initial = {};
-    for (const lead of queue) {
+    for (const lead of allQueue) {
       if (lead.subject && lead.emailBody) {
         initial[lead.id] = { status: 'ready', subject: lead.subject, body: lead.emailBody };
       } else {
@@ -233,7 +294,7 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     }
     setPitchState(initial);
 
-    const toGenerate = queue.filter(l => !l.subject || !l.emailBody);
+    const toGenerate = allQueue.filter(l => !l.subject || !l.emailBody);
     await Promise.all(toGenerate.map(async (lead) => {
       try {
         const pitch = await api.generateOutreach(lead.id);
@@ -252,7 +313,7 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
 
   const handleSendApproved = async () => {
     setIsSending(true);
-    const toSend = queue.filter(l => pitchState[l.id]?.status === 'approved');
+    const toSend = allQueue.filter(l => pitchState[l.id]?.status === 'approved');
     for (const lead of toSend) {
       const { subject, body } = pitchState[lead.id];
       setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'sending' } }));
@@ -286,12 +347,8 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     setPitchState(prev => ({ ...prev, [leadId]: { ...prev[leadId], status } }));
   };
 
-  const sentCount = Object.values(pitchState).filter(s => s.status === 'sent').length;
-  const allSent = sentCount > 0 && sentCount === toSendCount(pitchState);
-
-  function toSendCount(ps) {
-    return Object.values(ps).filter(s => ['approved', 'sending', 'sent'].includes(s.status)).length;
-  }
+  const totalQueueCount = leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status)).length;
+  const totalFollowupCount = leads.filter(l => l.outreachCount === 1 && !l.emailOpenedAt && l.outreachOptedOut !== 'Yes' && !DEAD_STATUSES.has(l.status) && daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS).length;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -323,7 +380,7 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-4">
         {[
-          { id: 'queue', label: `Queue (${leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status)).length})` },
+          { id: 'queue', label: `Queue (${totalQueueCount + totalFollowupCount})` },
           { id: 'sent',  label: `Sent (${leads.filter(l => l.outreachCount > 0).length})` },
         ].map(t => (
           <button
@@ -393,70 +450,57 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
         )}
       </div>
 
-      {/* ── Queue tab ── */}
+      {/* ── Queue tab — normal mode ── */}
       {tab === 'queue' && !bulkMode && (
         <div className="space-y-2">
-          {queue.length > 0 && (
-            <div className="flex justify-end mb-1">
+          {allQueue.length > 0 && (
+            <div className="flex justify-end mb-3">
               <button
                 onClick={handleGenerateAll}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Sparkles size={12} />
-                Generate All ({queue.length})
+                Generate All ({allQueue.length})
               </button>
             </div>
           )}
-          {queue.length === 0 ? (
+
+          {/* New leads section */}
+          {queue.length > 0 && (
+            <>
+              {followups.length > 0 && (
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider pb-1">New leads</p>
+              )}
+              {queue.map(lead => (
+                <QueueCard key={lead.id} lead={lead} onSelect={onSelectLead} isFollowUp={false} />
+              ))}
+            </>
+          )}
+
+          {/* Follow-ups section */}
+          {followups.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 pt-4 pb-1">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Follow-ups</p>
+                <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                  {followups.length} ready
+                </span>
+              </div>
+              {followups.map(lead => (
+                <QueueCard key={lead.id} lead={lead} onSelect={onSelectLead} isFollowUp />
+              ))}
+            </>
+          )}
+
+          {allQueue.length === 0 && (
             <p className="text-sm text-slate-400 text-center py-16">
               {search || priorityFilter !== 'all' ? 'No leads match your filters.' : 'No leads in queue — add email addresses to leads to populate this.'}
             </p>
-          ) : (
-            queue.map(lead => {
-              const p = getPriorityStyle(lead.priority);
-              return (
-                <button
-                  key={lead.id}
-                  onClick={() => onSelectLead(lead)}
-                  className="w-full text-left bg-white border border-slate-200 rounded-xl px-4 py-3.5 hover:border-blue-300 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <PriorityPip priority={lead.priority} />
-                        <p className="text-sm font-semibold text-slate-800 truncate">{lead.businessName}</p>
-                      </div>
-                      <p className="text-xs text-slate-500">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</p>
-                      <div className="flex flex-wrap items-center gap-3 mt-2">
-                        {lead.email && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Mail size={11} />{lead.email}
-                          </span>
-                        )}
-                        {lead.phone && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Phone size={11} />{lead.phone}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <StatusBadge status={lead.status} />
-                      {p && (
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
-                          {p.label}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })
           )}
         </div>
       )}
 
-      {/* ── Bulk review mode ── */}
+      {/* ── Queue tab — bulk review mode ── */}
       {tab === 'queue' && bulkMode && (
         <div className="space-y-3">
           {/* Bulk action bar */}
@@ -479,18 +523,21 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
                 disabled={isSending || !allGenerated}
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isSending ? <><Loader2 size={11} className="animate-spin" />Sending...</> : <><SendHorizontal size={11} />Send Approved ({approvedCount})</>}
+                {isSending
+                  ? <><Loader2 size={11} className="animate-spin" />Sending...</>
+                  : <><SendHorizontal size={11} />Send Approved ({approvedCount})</>}
               </button>
             )}
           </div>
 
-          {queue.map(lead => {
+          {allQueue.map(lead => {
             const state = pitchState[lead.id];
             if (!state) return null;
             return (
               <BulkLeadCard
                 key={lead.id}
                 lead={lead}
+                isFollowUp={isFollowUpLead(lead)}
                 state={state}
                 onUpdate={(field, value) => updatePitch(lead.id, field, value)}
                 onApprove={() => setStatus(lead.id, 'approved')}
