@@ -39,6 +39,22 @@ export function getPriorityStyle(priority) {
   return PRIORITY_CONFIG[priority] || null;
 }
 
+export const EMAIL_STAGES = ['none', 'scheduled', 'sent', 'opened'];
+
+export const EMAIL_STAGE_CONFIG = {
+  none:      { label: 'No Email',  bg: 'bg-slate-100',  text: 'text-slate-400',  dot: 'bg-slate-300'  },
+  scheduled: { label: 'Scheduled', bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-400'  },
+  sent:      { label: 'Sent',      bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-400'   },
+  opened:    { label: 'Opened',    bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
+};
+
+export function getEmailStage(lead, scheduledLeadIds) {
+  if (lead.outreachCount >= 1 && lead.emailOpenedAt) return 'opened';
+  if (lead.outreachCount >= 1) return 'sent';
+  if (scheduledLeadIds && scheduledLeadIds.has(lead.id)) return 'scheduled';
+  return 'none';
+}
+
 export function formatDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);

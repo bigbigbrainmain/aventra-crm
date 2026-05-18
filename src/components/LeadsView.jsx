@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star } from 'lucide-react';
-import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG } from '../utils/constants';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star, Clock, Eye } from 'lucide-react';
+import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG, EMAIL_STAGE_CONFIG, EMAIL_STAGES, getEmailStage } from '../utils/constants';
 
 const PRIORITIES = Object.keys(PRIORITY_CONFIG);
 
@@ -84,7 +84,26 @@ function StatusBadge({ status }) {
   );
 }
 
-function LeadCard({ lead, onClick, onToggleFavourite }) {
+function EmailStageBadge({ stage, count }) {
+  const cfg = EMAIL_STAGE_CONFIG[stage] || EMAIL_STAGE_CONFIG.none;
+  const icon =
+    stage === 'scheduled' ? <Clock size={10} className="shrink-0" /> :
+    stage === 'opened'    ? <Eye size={10} className="shrink-0" /> :
+    stage === 'sent'      ? <Mail size={10} className="shrink-0" /> :
+    null;
+  const label =
+    stage === 'sent'   ? `${count}x sent` :
+    stage === 'opened' ? `${count}x · opened` :
+    cfg.label;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
   const p = getPriorityStyle(lead.priority);
   return (
     <div
@@ -131,21 +150,23 @@ function LeadCard({ lead, onClick, onToggleFavourite }) {
         )}
       </div>
 
-      {p && (
-        <div className="mt-3 pt-3 border-t border-slate-50">
+      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
+        {p ? (
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
             {lead.priority}
           </span>
-        </div>
-      )}
+        ) : <span />}
+        <EmailStageBadge stage={emailStage} count={lead.outreachCount || 0} />
+      </div>
     </div>
   );
 }
 
-export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavourite }) {
+export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, onRefresh, onToggleFavourite }) {
   const [tab, setTab] = useState('all');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
+  const [selectedEmailStages, setSelectedEmailStages] = useState([]);
   const [search, setSearch] = useState('');
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
@@ -157,21 +178,28 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
     localStorage.setItem('crm_hiddenStatuses', JSON.stringify(val));
   };
 
+  const scheduledLeadIds = useMemo(() => {
+    const ids = new Set();
+    scheduledEmails.filter(s => s.status === 'pending').forEach(s => ids.add(s.leadId));
+    return ids;
+  }, [scheduledEmails]);
+
   const favouriteCount = leads.filter(l => l.isFavourite).length;
 
   const baseList = tab === 'favourites' ? leads.filter(l => l.isFavourite) : leads;
 
   const filtered = baseList.filter(l => {
-    const matchStatus    = selectedStatuses.length === 0   || selectedStatuses.includes(l.status);
-    const matchNotHidden = !hiddenStatuses.includes(l.status);
-    const matchPriority  = selectedPriorities.length === 0 || selectedPriorities.includes(l.priority);
+    const matchStatus     = selectedStatuses.length === 0      || selectedStatuses.includes(l.status);
+    const matchNotHidden  = !hiddenStatuses.includes(l.status);
+    const matchPriority   = selectedPriorities.length === 0    || selectedPriorities.includes(l.priority);
+    const matchEmailStage = selectedEmailStages.length === 0   || selectedEmailStages.includes(getEmailStage(l, scheduledLeadIds));
     const q = search.toLowerCase();
-    const matchSearch    = !q ||
+    const matchSearch     = !q ||
       l.businessName.toLowerCase().includes(q) ||
       l.industry.toLowerCase().includes(q) ||
       l.city.toLowerCase().includes(q) ||
       l.email.toLowerCase().includes(q);
-    return matchStatus && matchNotHidden && matchPriority && matchSearch;
+    return matchStatus && matchNotHidden && matchPriority && matchEmailStage && matchSearch;
   });
 
   // In "All" tab, sort favourites to top
@@ -179,7 +207,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
     ? [...filtered].sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
     : filtered;
 
-  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || hiddenStatuses.length > 0 || search;
+  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmailStages.length > 0 || hiddenStatuses.length > 0 || search;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -286,10 +314,28 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
           }}
         />
 
+        {/* Email stage filter */}
+        <MultiSelect
+          label="Email"
+          options={EMAIL_STAGES}
+          selected={selectedEmailStages}
+          onChange={setSelectedEmailStages}
+          activeClassName="bg-blue-600 text-white border-blue-600"
+          renderOption={(opt) => {
+            const cfg = EMAIL_STAGE_CONFIG[opt];
+            return (
+              <span className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </span>
+            );
+          }}
+        />
+
         {/* Clear all */}
         {anyFilter && (
           <button
-            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); updateHiddenStatuses(['Lost']); setSearch(''); }}
+            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); setSelectedEmailStages([]); updateHiddenStatuses(['Lost']); setSearch(''); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Clear all
@@ -310,6 +356,7 @@ export default function LeadsView({ leads, onSelectLead, onRefresh, onToggleFavo
             <LeadCard
               key={lead.id}
               lead={lead}
+              emailStage={getEmailStage(lead, scheduledLeadIds)}
               onClick={() => onSelectLead(lead)}
               onToggleFavourite={onToggleFavourite}
             />
