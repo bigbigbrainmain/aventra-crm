@@ -7,8 +7,8 @@ const HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const FROM = process.env.OUTREACH_FROM || 'joe@aventrasites.online';
-const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Joe';
+const FROM = process.env.OUTREACH_FROM || 'ollie@aventrasites.online';
+const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Ollie';
 
 async function findLead(leadId) {
   const rows = await getRange(TABS.LEADS, 'A2:W');
@@ -42,9 +42,9 @@ exports.handler = async (event) => {
 <p style="white-space: pre-wrap; margin: 0 0 24px 0;">${lead.emailBody}</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
-  Joe Clacher<br>
-  Co-Founder &amp; CTO<br>
-  +447710988228<br>
+  Ollie Eastham<br>
+  Co-Founder &amp; CRO<br>
+  +44 7787 447731<br>
   <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
 </p>
 <p style="font-size: 11px; color: #999; margin: 0;">
