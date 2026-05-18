@@ -512,8 +512,12 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const matchPriority = (lead) =>
     priorityFilter === 'all' || lead.priority === priorityFilter;
 
+  const pendingScheduledLeadIds = new Set(
+    scheduledEmails.filter(s => s.status === 'pending').map(s => s.leadId)
+  );
+
   const queue = leads
-    .filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status))
+    .filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status) && !pendingScheduledLeadIds.has(l.id))
     .filter(matchSearch)
     .filter(matchPriority)
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
@@ -524,7 +528,8 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       !l.emailOpenedAt &&
       l.outreachOptedOut !== 'Yes' &&
       !DEAD_STATUSES.has(l.status) &&
-      daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS
+      daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS &&
+      !pendingScheduledLeadIds.has(l.id)
     )
     .filter(matchSearch)
     .filter(matchPriority)
@@ -695,8 +700,8 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     loadScheduled();
   };
 
-  const totalQueueCount = leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status)).length;
-  const totalFollowupCount = leads.filter(l => l.outreachCount === 1 && !l.emailOpenedAt && l.outreachOptedOut !== 'Yes' && !DEAD_STATUSES.has(l.status) && daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS).length;
+  const totalQueueCount = leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status) && !pendingScheduledLeadIds.has(l.id)).length;
+  const totalFollowupCount = leads.filter(l => l.outreachCount === 1 && !l.emailOpenedAt && l.outreachOptedOut !== 'Yes' && !DEAD_STATUSES.has(l.status) && daysSince(l.lastOutreachAt) >= FOLLOWUP_DAYS && !pendingScheduledLeadIds.has(l.id)).length;
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
