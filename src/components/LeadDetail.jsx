@@ -9,6 +9,7 @@ import {
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
 import ChatSection from './ChatSection';
+import { useUserSettings } from '../hooks/useUserSettings';
 
 const FROM_LABELS = {
   dashboard: 'Dashboard',
@@ -52,6 +53,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const fromKey = state?.from;
   const fromLabel = FROM_LABELS[fromKey] ?? 'All Leads';
   const fromPath = FROM_LABELS[fromKey] ? `/${fromKey}` : '/leads';
+  const { getSignature } = useUserSettings();
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
@@ -251,10 +253,11 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     setOutreachGenerating(true);
     setOutreachError('');
     try {
-      const pitch = await api.generateOutreach(lead.id);
+      const [pitch, sig] = await Promise.all([api.generateOutreach(lead.id), getSignature()]);
+      const body = sig ? `${pitch.body}\n\n${sig}` : pitch.body;
       setDraftSubject(pitch.subject);
-      setDraftBody(pitch.body);
-      onUpdate({ ...lead, subject: pitch.subject, emailBody: pitch.body });
+      setDraftBody(body);
+      onUpdate({ ...lead, subject: pitch.subject, emailBody: body });
     } catch (err) {
       setOutreachError(err.message);
     } finally {

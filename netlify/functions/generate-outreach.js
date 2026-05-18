@@ -46,7 +46,7 @@ Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
-- Sign off as just "Ollie" then "Aventra" on next line
+- Do NOT include any sign-off or signature — that is added separately
 - NO marketing speak, NO exclamation marks, NO templates
 
 Return ONLY valid JSON in this exact format, nothing else:
@@ -64,7 +64,7 @@ Rules:
 - If they have a website: mention you spotted a couple of ideas to help them get more local work
 - If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
 - End with a tiny low-pressure ask (free mockup, or happy to send ideas)
-- Sign off as just "Ollie" then "Aventra" on next line
+- Do NOT include any sign-off or signature — that is added separately
 - NO unsubscribe links, NO marketing speak, NO exclamation marks
 
 Return ONLY valid JSON in this exact format, nothing else:

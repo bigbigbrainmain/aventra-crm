@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal, PenLine } from 'lucide-react';
 import { api } from '../utils/api';
+import SignatureModal from './SignatureModal';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard',      Icon: LayoutDashboard },
@@ -21,6 +22,7 @@ export default function Sidebar({ analytics, onSetup, onEnterLead }) {
   const todayCount   = analytics?.todayTasksCount   || 0;
 
   const [emailUsage, setEmailUsage] = useState(null);
+  const [showSignature, setShowSignature] = useState(false);
   const [pinned, setPinned] = useState(() => {
     try { return localStorage.getItem('crm_sidebarPinned') === 'true'; }
     catch { return false; }
@@ -153,6 +155,16 @@ export default function Sidebar({ analytics, onSetup, onEnterLead }) {
         })()}
 
         <button
+          onClick={() => setShowSignature(v => !v)}
+          className="w-full flex items-center gap-2 px-2.5 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg text-xs font-medium transition-colors"
+        >
+          <PenLine size={13} className="shrink-0" />
+          <span className={`overflow-hidden transition-all duration-150 whitespace-nowrap ${textCls}`}>
+            My Signature
+          </span>
+        </button>
+
+        <button
           onClick={onSetup}
           className="w-full flex items-center gap-2 px-2.5 py-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg text-xs font-medium transition-colors"
         >
@@ -162,6 +174,8 @@ export default function Sidebar({ analytics, onSetup, onEnterLead }) {
           </span>
         </button>
       </div>
+
+      {showSignature && <SignatureModal onClose={() => setShowSignature(false)} />}
     </aside>
   );
 }

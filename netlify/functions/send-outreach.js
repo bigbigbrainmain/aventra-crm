@@ -40,13 +40,6 @@ exports.handler = async (event) => {
     const unsubUrl = `https://aventra-crm.netlify.app/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
     const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="white-space: pre-wrap; margin: 0 0 24px 0;">${lead.emailBody}</p>
-<p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
-  --<br>
-  Ollie Eastham<br>
-  Co-Founder &amp; CRO<br>
-  +44 7787 447731<br>
-  <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
-</p>
 <p style="font-size: 11px; color: #999; margin: 0;">
   <a href="${unsubUrl}" style="color: #999;">Unsubscribe</a>
 </p>
