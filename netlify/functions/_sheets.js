@@ -10,6 +10,7 @@ const TABS = {
   DOCUMENTS: 'Documents',
   ADDONS: 'Add-ons',
   CUSTOMER_ADDONS: 'Customer Add-ons',
+  SCHEDULED: 'Scheduled Outreach',
 };
 
 function getClient() {
@@ -130,6 +131,24 @@ function rowToCustomerAddon(row, rowNum) {
   };
 }
 
+// Scheduled Outreach columns: A(0)=ID, B(1)=LeadID, C(2)=BusinessName, D(3)=Subject,
+// E(4)=Body, F(5)=SendAt, G(6)=Status, H(7)=CreatedAt, I(8)=Error, J(9)=LeadEmail
+function rowToScheduled(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    leadId: String(row[1] || ''),
+    businessName: String(row[2] || ''),
+    subject: String(row[3] || ''),
+    body: String(row[4] || ''),
+    sendAt: String(row[5] || ''),
+    status: String(row[6] || 'pending'),
+    createdAt: String(row[7] || ''),
+    error: String(row[8] || ''),
+    leadEmail: String(row[9] || ''),
+    _row: rowNum,
+  };
+}
+
 // Task columns: A(0)=ID, B(1)=Lead ID, C(2)=Description, D(3)=Due Date, E(4)=Completed, F(5)=Created Date
 function rowToTask(row, rowNum) {
   return {
@@ -217,6 +236,22 @@ function genId(prefix) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
+async function ensureTab(tabName, headers) {
+  const sheets = getClient();
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = spreadsheet.data.sheets.some(s => s.properties.title === tabName);
+  if (exists) return;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: { requests: [{ addSheet: { properties: { title: tabName } } }] },
+  });
+
+  if (headers && headers.length > 0) {
+    await appendRow(tabName, headers);
+  }
+}
+
 async function updateRange(tab, startCell, values) {
   const sheets = getClient();
   await sheets.spreadsheets.values.update({
@@ -237,11 +272,13 @@ module.exports = {
   rowToDocument,
   rowToAddon,
   rowToCustomerAddon,
+  rowToScheduled,
   getRange,
   appendRow,
   updateCell,
   updateRow,
   deleteRow,
   updateRange,
+  ensureTab,
   genId,
 };

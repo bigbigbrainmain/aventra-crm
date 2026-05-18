@@ -6,6 +6,9 @@
 [functions."auto-followup"]
   schedule = "0 8 * * *"
 
+[functions."scheduled-send"]
+  schedule = "0 * * * *"
+
 [dev]
   command = "npm run dev"
   port = 8888
