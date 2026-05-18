@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search, Mail, Phone, CheckCircle, XCircle, Clock,
   Filter, PhoneCall, AlertCircle, Loader2, Check,
-  SendHorizontal, Sparkles, ChevronLeft, Calendar, Trash2, Edit3,
+  SendHorizontal, Sparkles, ChevronLeft, ChevronDown, Calendar, Trash2, Edit3,
 } from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 import { api } from '../utils/api';
@@ -72,6 +72,37 @@ function StatusBadge({ status }) {
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.bg} ${s.text}`}>
       {status}
     </span>
+  );
+}
+
+function IncompleteCard({ lead, onSelect }) {
+  const missing = [
+    !lead.email    && 'No email',
+    !lead.industry && 'No industry',
+    !lead.city     && 'No city',
+  ].filter(Boolean);
+
+  return (
+    <button
+      onClick={() => onSelect(lead)}
+      className="w-full text-left bg-white border border-amber-100 rounded-xl px-4 py-3 hover:border-amber-300 hover:shadow-sm transition-all"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-700 truncate">{lead.businessName}</p>
+          {(lead.industry || lead.city) && (
+            <p className="text-xs text-slate-400">{lead.industry}{lead.industry && lead.city ? ` · ${lead.city}` : lead.city}</p>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          {missing.map(m => (
+            <span key={m} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full font-medium">
+              {m}
+            </span>
+          ))}
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -432,6 +463,9 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   // Schedule modal (from bulk review)
   const [showScheduleModal, setShowScheduleModal] = useState(false);
 
+  // Data quality
+  const [showIncomplete, setShowIncomplete] = useState(false);
+
   // Scheduled tab state
   const [scheduledEmails, setScheduledEmails] = useState([]);
   const [scheduledLoading, setScheduledLoading] = useState(false);
@@ -497,6 +531,16 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
 
   const allQueue = [...queue, ...followups];
+
+  const incomplete = leads
+    .filter(l =>
+      !DEAD_STATUSES.has(l.status) &&
+      l.outreachOptedOut !== 'Yes' &&
+      !l.outreachCount &&
+      (!l.email || !l.industry || !l.city)
+    )
+    .filter(matchSearch)
+    .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
 
   const sent = leads
     .filter(l => l.outreachCount > 0)
@@ -760,6 +804,29 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       {/* ── Queue tab — normal mode ── */}
       {tab === 'queue' && !bulkMode && (
         <div className="space-y-2">
+          {/* Incomplete leads warning */}
+          {incomplete.length > 0 && (
+            <div className="mb-1">
+              <button
+                onClick={() => setShowIncomplete(v => !v)}
+                className="w-full flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 hover:bg-amber-100 transition-colors"
+              >
+                <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                <span className="text-sm text-amber-800 font-medium flex-1 text-left">
+                  {incomplete.length} lead{incomplete.length > 1 ? 's' : ''} with missing data — hidden from queue
+                </span>
+                <ChevronDown size={14} className={`text-amber-600 transition-transform ${showIncomplete ? 'rotate-180' : ''}`} />
+              </button>
+              {showIncomplete && (
+                <div className="mt-2 space-y-1.5">
+                  {incomplete.map(lead => (
+                    <IncompleteCard key={lead.id} lead={lead} onSelect={onSelectLead} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {allQueue.length > 0 && (
             <div className="flex justify-end mb-3">
               <button
