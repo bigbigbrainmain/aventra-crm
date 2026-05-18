@@ -25,6 +25,7 @@ function CRMApp() {
   const [customers, setCustomers] = useState([]);
   const [addons, setAddons] = useState([]);
   const [customerAddons, setCustomerAddons] = useState([]);
+  const [scheduledEmails, setScheduledEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showEnterLead, setShowEnterLead] = useState(false);
@@ -41,13 +42,14 @@ function CRMApp() {
     setLoading(true);
     setError(null);
     try {
-      const [leadsData, tasksData, analyticsData, customersData, addonsData, customerAddonsData] = await Promise.all([
+      const [leadsData, tasksData, analyticsData, customersData, addonsData, customerAddonsData, scheduledData] = await Promise.all([
         api.getLeads(),
         api.getTasks(),
         api.getAnalytics(),
         api.getCustomers(),
         api.getAddons(),
         api.getCustomerAddons(),
+        api.getScheduledEmails(),
       ]);
       setLeads(leadsData);
       setTasks(tasksData);
@@ -55,6 +57,7 @@ function CRMApp() {
       setCustomers(customersData);
       setAddons(addonsData);
       setCustomerAddons(customerAddonsData);
+      setScheduledEmails(scheduledData);
     } catch (err) {
       console.error('Failed to load data:', err);
       setError(err.message);
@@ -157,6 +160,7 @@ function CRMApp() {
             <Route path="/leads" element={
               <LeadsView
                 leads={leads}
+                scheduledEmails={scheduledEmails}
                 onSelectLead={(lead) => selectLead(lead, 'leads')}
                 onRefresh={loadData}
                 onToggleFavourite={handleToggleFavourite}
@@ -165,6 +169,7 @@ function CRMApp() {
             <Route path="/leads/:leadId" element={
               <LeadsView
                 leads={leads}
+                scheduledEmails={scheduledEmails}
                 onSelectLead={(lead) => selectLead(lead, 'leads')}
                 onRefresh={loadData}
                 onToggleFavourite={handleToggleFavourite}
