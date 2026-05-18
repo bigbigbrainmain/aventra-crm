@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, Mail, Phone, CheckCircle, XCircle, Clock, Filter, PhoneCall, AlertCircle } from 'lucide-react';
+import {
+  Search, Mail, Phone, CheckCircle, XCircle, Clock,
+  Filter, PhoneCall, AlertCircle, Loader2, Check,
+  SendHorizontal, X, ChevronLeft, Sparkles,
+} from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
+import { api } from '../utils/api';
 
 const PRIORITY_ORDER = { '🔴 Priority 1': 0, '🟠 Priority 2': 1, '🟡 Priority 3': 2, '🟢 Skip': 3 };
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit']);
@@ -38,21 +43,147 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function OutreachView({ leads, onSelectLead }) {
+function BulkLeadCard({ lead, state, onUpdate, onApprove, onSkip, onRetry }) {
+  const { status, subject, body, error } = state;
+  const p = getPriorityStyle(lead.priority);
+
+  const borderCls =
+    status === 'approved' ? 'border-green-300 bg-green-50/40' :
+    status === 'sent'     ? 'border-green-400 bg-green-50' :
+    status === 'error'    ? 'border-red-200' :
+    status === 'skipped'  ? 'border-slate-100 opacity-50' :
+                            'border-slate-200';
+
+  return (
+    <div className={`bg-white border rounded-xl p-4 transition-all ${borderCls}`}>
+      {/* Lead info row */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <PriorityPip priority={lead.priority} />
+        <span className="text-sm font-semibold text-slate-800">{lead.businessName}</span>
+        <span className="text-xs text-slate-400">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</span>
+        {p && (
+          <span className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
+            {p.label}
+          </span>
+        )}
+      </div>
+
+      {status === 'generating' && (
+        <div className="flex items-center gap-2 text-sm text-slate-400 py-3">
+          <Loader2 size={14} className="animate-spin shrink-0" />
+          Generating pitch...
+        </div>
+      )}
+
+      {(status === 'ready' || status === 'approved' || status === 'skipped') && (
+        <>
+          <div className="space-y-2 mb-3">
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Subject</p>
+              <input
+                value={subject}
+                onChange={e => onUpdate('subject', e.target.value)}
+                className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Body</p>
+              <textarea
+                value={body}
+                onChange={e => onUpdate('body', e.target.value)}
+                rows={4}
+                className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {status === 'approved' ? (
+              <>
+                <span className="flex items-center gap-1.5 text-xs text-green-700 font-semibold">
+                  <Check size={13} />
+                  Approved
+                </span>
+                <button
+                  onClick={onSkip}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors ml-1"
+                >
+                  Undo
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onApprove}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Check size={11} />
+                  Approve
+                </button>
+                <button
+                  onClick={onSkip}
+                  className="px-3 py-1.5 text-slate-500 text-xs font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                >
+                  {status === 'skipped' ? 'Skipped — approve?' : 'Skip'}
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {status === 'sending' && (
+        <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+          <Loader2 size={14} className="animate-spin shrink-0" />
+          Sending...
+        </div>
+      )}
+
+      {status === 'sent' && (
+        <div className="flex items-center gap-2 text-sm text-green-700 font-semibold py-2">
+          <CheckCircle size={14} />
+          Sent
+        </div>
+      )}
+
+      {status === 'error' && (
+        <div className="space-y-2 pt-1">
+          <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error || 'Something went wrong'}</p>
+          <button onClick={onRetry} className="text-xs text-blue-600 hover:text-blue-700 transition-colors">
+            Retry
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const filterLeadId = searchParams.get('lead');
-  const [tab, setTab] = useState(filterLeadId ? 'sent' : 'queue');
 
-  useEffect(() => {
-    if (filterLeadId) setTab('sent');
-  }, [filterLeadId]);
+  const [tab, setTab] = useState(filterLeadId ? 'sent' : 'queue');
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [openedFilter, setOpenedFilter] = useState('all');
 
-  const q = search.toLowerCase();
+  // Bulk generate/review state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [pitchState, setPitchState] = useState({});
+  const [isSending, setIsSending] = useState(false);
 
+  useEffect(() => {
+    if (filterLeadId) setTab('sent');
+  }, [filterLeadId]);
+
+  useEffect(() => {
+    if (tab !== 'queue') {
+      setBulkMode(false);
+      setPitchState({});
+    }
+  }, [tab]);
+
+  const q = search.toLowerCase();
   const matchSearch = (lead) =>
     !q ||
     lead.businessName.toLowerCase().includes(q) ||
@@ -84,6 +215,84 @@ export default function OutreachView({ leads, onSelectLead }) {
   const filteredLead = filterLeadId ? leads.find(l => l.id === filterLeadId) : null;
   const hotLeads = sent.filter(l => l.emailOpenedAt && daysSince(l.emailOpenedAt) <= 2);
 
+  // Bulk mode derived values
+  const generatedCount = Object.values(pitchState).filter(s => s.status !== 'generating').length;
+  const totalCount = Object.keys(pitchState).length;
+  const approvedCount = Object.values(pitchState).filter(s => s.status === 'approved').length;
+  const allGenerated = totalCount > 0 && generatedCount === totalCount;
+
+  const handleGenerateAll = async () => {
+    setBulkMode(true);
+    const initial = {};
+    for (const lead of queue) {
+      if (lead.subject && lead.emailBody) {
+        initial[lead.id] = { status: 'ready', subject: lead.subject, body: lead.emailBody };
+      } else {
+        initial[lead.id] = { status: 'generating', subject: '', body: '' };
+      }
+    }
+    setPitchState(initial);
+
+    const toGenerate = queue.filter(l => !l.subject || !l.emailBody);
+    await Promise.all(toGenerate.map(async (lead) => {
+      try {
+        const pitch = await api.generateOutreach(lead.id);
+        setPitchState(prev => ({
+          ...prev,
+          [lead.id]: { status: 'ready', subject: pitch.subject, body: pitch.body },
+        }));
+      } catch (err) {
+        setPitchState(prev => ({
+          ...prev,
+          [lead.id]: { status: 'error', subject: '', body: '', error: err.message },
+        }));
+      }
+    }));
+  };
+
+  const handleSendApproved = async () => {
+    setIsSending(true);
+    const toSend = queue.filter(l => pitchState[l.id]?.status === 'approved');
+    for (const lead of toSend) {
+      const { subject, body } = pitchState[lead.id];
+      setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'sending' } }));
+      try {
+        await api.updateLead(lead.id, { subject, emailBody: body });
+        await api.sendOutreach(lead.id);
+        setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'sent' } }));
+      } catch (err) {
+        setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'error', error: err.message } }));
+      }
+    }
+    setIsSending(false);
+    onRefresh?.();
+  };
+
+  const handleRetry = async (lead) => {
+    setPitchState(prev => ({ ...prev, [lead.id]: { status: 'generating', subject: '', body: '' } }));
+    try {
+      const pitch = await api.generateOutreach(lead.id);
+      setPitchState(prev => ({ ...prev, [lead.id]: { status: 'ready', subject: pitch.subject, body: pitch.body } }));
+    } catch (err) {
+      setPitchState(prev => ({ ...prev, [lead.id]: { status: 'error', subject: '', body: '', error: err.message } }));
+    }
+  };
+
+  const updatePitch = (leadId, field, value) => {
+    setPitchState(prev => ({ ...prev, [leadId]: { ...prev[leadId], [field]: value } }));
+  };
+
+  const setStatus = (leadId, status) => {
+    setPitchState(prev => ({ ...prev, [leadId]: { ...prev[leadId], status } }));
+  };
+
+  const sentCount = Object.values(pitchState).filter(s => s.status === 'sent').length;
+  const allSent = sentCount > 0 && sentCount === toSendCount(pitchState);
+
+  function toSendCount(ps) {
+    return Object.values(ps).filter(s => ['approved', 'sending', 'sent'].includes(s.status)).length;
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
       {/* Header */}
@@ -101,7 +310,6 @@ export default function OutreachView({ leads, onSelectLead }) {
           </div>
         )}
 
-        {/* Hot leads callout */}
         {hotLeads.length > 0 && tab === 'sent' && !filterLeadId && (
           <div className="mt-3 flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5">
             <PhoneCall size={14} className="text-orange-600 shrink-0" />
@@ -115,7 +323,7 @@ export default function OutreachView({ leads, onSelectLead }) {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-4">
         {[
-          { id: 'queue', label: `Queue (${leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount).length})` },
+          { id: 'queue', label: `Queue (${leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status)).length})` },
           { id: 'sent',  label: `Sent (${leads.filter(l => l.outreachCount > 0).length})` },
         ].map(t => (
           <button
@@ -143,7 +351,6 @@ export default function OutreachView({ leads, onSelectLead }) {
           />
         </div>
 
-        {/* Priority filter */}
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
           {['all', '🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3'].map((p, i) => {
             const labels = ['All', 'P1', 'P2', 'P3'];
@@ -165,7 +372,6 @@ export default function OutreachView({ leads, onSelectLead }) {
           })}
         </div>
 
-        {/* Opened filter — sent tab only */}
         {tab === 'sent' && (
           <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
             {[
@@ -187,9 +393,20 @@ export default function OutreachView({ leads, onSelectLead }) {
         )}
       </div>
 
-      {/* Queue tab */}
-      {tab === 'queue' && (
+      {/* ── Queue tab ── */}
+      {tab === 'queue' && !bulkMode && (
         <div className="space-y-2">
+          {queue.length > 0 && (
+            <div className="flex justify-end mb-1">
+              <button
+                onClick={handleGenerateAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Sparkles size={12} />
+                Generate All ({queue.length})
+              </button>
+            </div>
+          )}
           {queue.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-16">
               {search || priorityFilter !== 'all' ? 'No leads match your filters.' : 'No leads in queue — add email addresses to leads to populate this.'}
@@ -197,7 +414,6 @@ export default function OutreachView({ leads, onSelectLead }) {
           ) : (
             queue.map(lead => {
               const p = getPriorityStyle(lead.priority);
-              const s = getStatusStyle(lead.status);
               return (
                 <button
                   key={lead.id}
@@ -240,7 +456,53 @@ export default function OutreachView({ leads, onSelectLead }) {
         </div>
       )}
 
-      {/* Sent tab */}
+      {/* ── Bulk review mode ── */}
+      {tab === 'queue' && bulkMode && (
+        <div className="space-y-3">
+          {/* Bulk action bar */}
+          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 sticky top-4 z-10 shadow-sm">
+            <button
+              onClick={() => { setBulkMode(false); setPitchState({}); }}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <ChevronLeft size={13} />
+              Cancel
+            </button>
+            <div className="flex-1 text-xs text-slate-500">
+              {allGenerated
+                ? `All ${totalCount} pitches ready`
+                : `Generating… ${generatedCount} / ${totalCount}`}
+            </div>
+            {approvedCount > 0 && (
+              <button
+                onClick={handleSendApproved}
+                disabled={isSending || !allGenerated}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSending ? <><Loader2 size={11} className="animate-spin" />Sending...</> : <><SendHorizontal size={11} />Send Approved ({approvedCount})</>}
+              </button>
+            )}
+          </div>
+
+          {queue.map(lead => {
+            const state = pitchState[lead.id];
+            if (!state) return null;
+            return (
+              <BulkLeadCard
+                key={lead.id}
+                lead={lead}
+                state={state}
+                onUpdate={(field, value) => updatePitch(lead.id, field, value)}
+                onApprove={() => setStatus(lead.id, 'approved')}
+                onSkip={() => setStatus(lead.id, state.status === 'approved' ? 'ready' : 'skipped')}
+                onRetry={() => handleRetry(lead)}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Sent tab ── */}
       {tab === 'sent' && (
         <div className="space-y-2">
           {sent.length === 0 ? (
@@ -267,7 +529,6 @@ export default function OutreachView({ leads, onSelectLead }) {
                       </div>
                       <p className="text-xs text-slate-500">{lead.industry}{lead.city ? ` · ${lead.city}` : ''}</p>
 
-                      {/* Actionable state badge */}
                       <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg border text-xs font-medium ${state.cls}`}>
                         {state.type === 'hot'      && <PhoneCall size={11} />}
                         {state.type === 'opened'   && <CheckCircle size={11} />}
@@ -277,7 +538,6 @@ export default function OutreachView({ leads, onSelectLead }) {
                         {state.label}
                       </div>
 
-                      {/* Meta row */}
                       <div className="flex flex-wrap items-center gap-3 mt-2">
                         <span className="text-xs text-slate-400 flex items-center gap-1">
                           <Mail size={11} />
