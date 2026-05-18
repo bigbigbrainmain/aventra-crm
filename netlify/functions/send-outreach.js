@@ -38,8 +38,9 @@ exports.handler = async (event) => {
     if (!lead.subject || !lead.emailBody) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Generate an AI pitch first' }) };
 
     const unsubUrl = `https://aventra-crm.netlify.app/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
+    const bodyHtml = lead.emailBody.replace(/\n/g, '<br>');
     const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
-<p style="white-space: pre-wrap; margin: 0 0 24px 0;">${lead.emailBody}</p>
+<p style="margin: 0 0 24px 0;">${bodyHtml}</p>
 <p style="font-size: 11px; color: #999; margin: 0;">
   <a href="${unsubUrl}" style="color: #999;">Unsubscribe</a>
 </p>
