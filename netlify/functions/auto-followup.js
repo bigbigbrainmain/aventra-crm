@@ -19,7 +19,7 @@ async function generateFollowUpPitch(lead) {
     lead.notes ? `- Notes: ${lead.notes}` : null,
   ].filter(Boolean).join('\n');
 
-  const prompt = `Write a short follow-up email from Joe at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
+  const prompt = `Write a short follow-up email from Ollie at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
 
 Lead details:
 ${context}
@@ -28,7 +28,7 @@ Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
-- Sign off as just "Joe" then "Aventra" on next line
+- Sign off as just "Ollie" then "Aventra" on next line
 - NO marketing speak, NO exclamation marks, NO templates
 
 Return ONLY valid JSON in this exact format, nothing else:
