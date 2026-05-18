@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Search, Mail, Phone, CheckCircle, XCircle, Clock,
   Filter, PhoneCall, AlertCircle, Loader2, Check,
-  SendHorizontal, Sparkles, ChevronLeft, RefreshCw,
+  SendHorizontal, Sparkles, ChevronLeft, Calendar, Trash2, Edit3,
 } from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 import { api } from '../utils/api';
@@ -27,6 +27,37 @@ function outreachState(lead) {
   if (d >= 3 && lead.outreachCount === 1) return { type: 'followup', label: `Day ${d} with no reply — follow up?`,     cls: 'text-amber-700 bg-amber-50 border-amber-200'   };
   if (lead.outreachCount >= 2)            return { type: 'silent',   label: `Follow-up sent · still no response`,      cls: 'text-slate-500 bg-slate-50 border-slate-200'   };
   return                                         { type: 'waiting',  label: `Sent ${timeAgo(lead.lastOutreachAt)} · awaiting response`, cls: 'text-slate-400 bg-slate-50 border-slate-100' };
+}
+
+function formatSendAt(isoStr) {
+  if (!isoStr) return '';
+  return new Date(isoStr).toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function getDefaultScheduleTime() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T09:00`;
+}
+
+function filterByDay(items, dayFilter) {
+  if (dayFilter === 'all') return items;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfter = new Date(tomorrow); dayAfter.setDate(dayAfter.getDate() + 1);
+  const nextWeek = new Date(today); nextWeek.setDate(nextWeek.getDate() + 7);
+  return items.filter(item => {
+    const d = new Date(item.sendAt);
+    if (dayFilter === 'today')    return d >= today && d < tomorrow;
+    if (dayFilter === 'tomorrow') return d >= tomorrow && d < dayAfter;
+    if (dayFilter === 'week')     return d >= today && d <= nextWeek;
+    return true;
+  });
 }
 
 function PriorityPip({ priority }) {
@@ -90,15 +121,16 @@ function QueueCard({ lead, onSelect, isFollowUp }) {
 }
 
 function BulkLeadCard({ lead, isFollowUp, state, onUpdate, onApprove, onSkip, onRetry }) {
-  const { status, subject, body, error } = state;
+  const { status, subject, body, error, scheduledAt } = state;
   const p = getPriorityStyle(lead.priority);
 
   const borderCls =
-    status === 'approved' ? 'border-green-300 bg-green-50/40' :
-    status === 'sent'     ? 'border-green-400 bg-green-50' :
-    status === 'error'    ? 'border-red-200' :
-    status === 'skipped'  ? 'border-slate-100 opacity-50' :
-                            'border-slate-200';
+    status === 'approved'   ? 'border-green-300 bg-green-50/40' :
+    status === 'scheduled'  ? 'border-blue-200 bg-blue-50/30' :
+    status === 'sent'       ? 'border-green-400 bg-green-50' :
+    status === 'error'      ? 'border-red-200' :
+    status === 'skipped'    ? 'border-slate-100 opacity-50' :
+                              'border-slate-200';
 
   return (
     <div className={`bg-white border rounded-xl p-4 transition-all ${borderCls}`}>
@@ -185,6 +217,20 @@ function BulkLeadCard({ lead, isFollowUp, state, onUpdate, onApprove, onSkip, on
         </div>
       )}
 
+      {status === 'scheduling' && (
+        <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+          <Loader2 size={14} className="animate-spin shrink-0" />
+          Scheduling...
+        </div>
+      )}
+
+      {status === 'scheduled' && (
+        <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold py-2">
+          <Calendar size={14} />
+          Scheduled · {formatSendAt(scheduledAt)}
+        </div>
+      )}
+
       {status === 'sent' && (
         <div className="flex items-center gap-2 text-sm text-green-700 font-semibold py-2">
           <CheckCircle size={14} />
@@ -204,6 +250,171 @@ function BulkLeadCard({ lead, isFollowUp, state, onUpdate, onApprove, onSkip, on
   );
 }
 
+function ScheduleModal({ title, subtitle, onConfirm, onClose }) {
+  const [dt, setDt] = useState(getDefaultScheduleTime);
+  const minDt = new Date().toISOString().slice(0, 16);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="text-base font-bold text-slate-900 mb-1">{title}</h3>
+        {subtitle && <p className="text-sm text-slate-500 mb-4">{subtitle}</p>}
+        <label className="block text-xs text-slate-500 mb-1.5">Send at</label>
+        <input
+          type="datetime-local"
+          value={dt}
+          min={minDt}
+          onChange={e => setDt(e.target.value)}
+          className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-5"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => onConfirm(new Date(dt).toISOString())}
+            disabled={!dt}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditScheduledModal({ item, onSave, onClose }) {
+  const [subject, setSubject] = useState(item.subject);
+  const [body, setBody] = useState(item.body);
+  const [dt, setDt] = useState(() => {
+    if (!item.sendAt) return getDefaultScheduleTime();
+    const d = new Date(item.sendAt);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({ subject, body, sendAt: new Date(dt).toISOString() });
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
+        <h3 className="text-base font-bold text-slate-900 mb-4">{item.businessName}</h3>
+        <div className="space-y-3 mb-4">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Subject</label>
+            <input
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Body</label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              rows={5}
+              className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Send at</label>
+            <input
+              type="datetime-local"
+              value={dt}
+              min={new Date().toISOString().slice(0, 16)}
+              onChange={e => setDt(e.target.value)}
+              className="w-full text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-slate-600 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduledCard({ item, checked, onCheck, onEdit, onCancel }) {
+  const isPending = item.status === 'pending';
+  const isFailed = item.status === 'failed';
+  return (
+    <div className={`bg-white border rounded-xl px-4 py-3.5 transition-all ${
+      isFailed ? 'border-red-200' : isPending ? 'border-slate-200' : 'border-slate-100 opacity-60'
+    }`}>
+      <div className="flex items-start gap-3">
+        {isPending && (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onCheck}
+            className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="text-sm font-semibold text-slate-800 truncate">{item.businessName}</p>
+            {item.status === 'sent' && (
+              <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full font-medium shrink-0">Sent</span>
+            )}
+            {item.status === 'failed' && (
+              <span className="text-xs text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full font-medium shrink-0">Failed</span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 truncate mb-1.5">{item.subject}</p>
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Calendar size={11} />
+            {formatSendAt(item.sendAt)}
+            {item.leadEmail && <span className="ml-1">· {item.leadEmail}</span>}
+          </div>
+          {isFailed && item.error && (
+            <p className="text-xs text-red-500 mt-1.5 bg-red-50 rounded-md px-2 py-1">{item.error}</p>
+          )}
+        </div>
+        {isPending && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={onEdit}
+              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Edit"
+            >
+              <Edit3 size={13} />
+            </button>
+            <button
+              onClick={onCancel}
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Cancel"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -218,6 +429,17 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
   const [pitchState, setPitchState] = useState({});
   const [isSending, setIsSending] = useState(false);
 
+  // Schedule modal (from bulk review)
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+
+  // Scheduled tab state
+  const [scheduledEmails, setScheduledEmails] = useState([]);
+  const [scheduledLoading, setScheduledLoading] = useState(false);
+  const [dayFilter, setDayFilter] = useState('all');
+  const [selectedScheduled, setSelectedScheduled] = useState(new Set());
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [editingScheduled, setEditingScheduled] = useState(null);
+
   useEffect(() => {
     if (filterLeadId) setTab('sent');
   }, [filterLeadId]);
@@ -228,6 +450,22 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       setPitchState({});
     }
   }, [tab]);
+
+  const loadScheduled = async () => {
+    setScheduledLoading(true);
+    try {
+      const data = await api.getScheduledEmails();
+      setScheduledEmails(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load scheduled emails:', err);
+    } finally {
+      setScheduledLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadScheduled();
+  }, []);
 
   const q = search.toLowerCase();
   const matchSearch = (lead) =>
@@ -282,6 +520,12 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
 
   const isFollowUpLead = (lead) => lead.outreachCount > 0;
 
+  const pendingScheduled = scheduledEmails.filter(s => s.status === 'pending');
+  const visibleScheduled = filterByDay(
+    scheduledEmails.filter(s => s.id),
+    dayFilter,
+  ).sort((a, b) => new Date(a.sendAt) - new Date(b.sendAt));
+
   const handleGenerateAll = async () => {
     setBulkMode(true);
     const initial = {};
@@ -329,6 +573,30 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
     onRefresh?.();
   };
 
+  const handleScheduleApproved = async (sendAt) => {
+    setShowScheduleModal(false);
+    const toSchedule = allQueue.filter(l => pitchState[l.id]?.status === 'approved');
+    for (const lead of toSchedule) {
+      const { subject, body } = pitchState[lead.id];
+      setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'scheduling' } }));
+      try {
+        await api.updateLead(lead.id, { subject, emailBody: body });
+        await api.createScheduledEmail({
+          leadId: lead.id,
+          businessName: lead.businessName,
+          subject,
+          body,
+          sendAt,
+          leadEmail: lead.email,
+        });
+        setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'scheduled', scheduledAt: sendAt } }));
+      } catch (err) {
+        setPitchState(prev => ({ ...prev, [lead.id]: { ...prev[lead.id], status: 'error', error: err.message } }));
+      }
+    }
+    loadScheduled();
+  };
+
   const handleRetry = async (lead) => {
     setPitchState(prev => ({ ...prev, [lead.id]: { status: 'generating', subject: '', body: '' } }));
     try {
@@ -345,6 +613,42 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
 
   const setStatus = (leadId, status) => {
     setPitchState(prev => ({ ...prev, [leadId]: { ...prev[leadId], status } }));
+  };
+
+  const toggleScheduledSelect = (id) => {
+    setSelectedScheduled(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkReschedule = async (sendAt) => {
+    setShowRescheduleModal(false);
+    await Promise.allSettled(
+      [...selectedScheduled].map(id => api.updateScheduledEmail(id, { sendAt }))
+    );
+    setSelectedScheduled(new Set());
+    loadScheduled();
+  };
+
+  const handleBulkCancel = async () => {
+    await Promise.allSettled(
+      [...selectedScheduled].map(id => api.deleteScheduledEmail(id))
+    );
+    setSelectedScheduled(new Set());
+    loadScheduled();
+  };
+
+  const handleCancelOne = async (id) => {
+    await api.deleteScheduledEmail(id).catch(console.error);
+    loadScheduled();
+  };
+
+  const handleSaveEdit = async (updates) => {
+    await api.updateScheduledEmail(editingScheduled.id, updates).catch(console.error);
+    setEditingScheduled(null);
+    loadScheduled();
   };
 
   const totalQueueCount = leads.filter(l => l.email && l.outreachOptedOut !== 'Yes' && !l.outreachCount && !DEAD_STATUSES.has(l.status)).length;
@@ -380,8 +684,9 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-4">
         {[
-          { id: 'queue', label: `Queue (${totalQueueCount + totalFollowupCount})` },
-          { id: 'sent',  label: `Sent (${leads.filter(l => l.outreachCount > 0).length})` },
+          { id: 'queue',     label: `Queue (${totalQueueCount + totalFollowupCount})` },
+          { id: 'sent',      label: `Sent (${leads.filter(l => l.outreachCount > 0).length})` },
+          { id: 'scheduled', label: `Scheduled (${pendingScheduled.length})` },
         ].map(t => (
           <button
             key={t.id}
@@ -395,60 +700,62 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search name, industry, city, email..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
-          {['all', '🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3'].map((p, i) => {
-            const labels = ['All', 'P1', 'P2', 'P3'];
-            const active = priorityFilter === p;
-            const cfg = p !== 'all' ? getPriorityStyle(p) : null;
-            return (
-              <button
-                key={p}
-                onClick={() => setPriorityFilter(p)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  active
-                    ? cfg ? `${cfg.bg} ${cfg.text}` : 'bg-slate-100 text-slate-700'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {labels[i]}
-              </button>
-            );
-          })}
-        </div>
-
-        {tab === 'sent' && (
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
-            {[
-              { id: 'all',      label: 'All'        },
-              { id: 'opened',   label: 'Opened'     },
-              { id: 'unopened', label: 'Not opened' },
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setOpenedFilter(f.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                  openedFilter === f.id ? 'bg-slate-100 text-slate-700' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+      {/* Filters (not shown in scheduled tab) */}
+      {tab !== 'scheduled' && (
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search name, industry, city, email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
-        )}
-      </div>
+
+          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+            {['all', '🔴 Priority 1', '🟠 Priority 2', '🟡 Priority 3'].map((p, i) => {
+              const labels = ['All', 'P1', 'P2', 'P3'];
+              const active = priorityFilter === p;
+              const cfg = p !== 'all' ? getPriorityStyle(p) : null;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPriorityFilter(p)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    active
+                      ? cfg ? `${cfg.bg} ${cfg.text}` : 'bg-slate-100 text-slate-700'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {labels[i]}
+                </button>
+              );
+            })}
+          </div>
+
+          {tab === 'sent' && (
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+              {[
+                { id: 'all',      label: 'All'        },
+                { id: 'opened',   label: 'Opened'     },
+                { id: 'unopened', label: 'Not opened' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setOpenedFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    openedFilter === f.id ? 'bg-slate-100 text-slate-700' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Queue tab — normal mode ── */}
       {tab === 'queue' && !bulkMode && (
@@ -518,15 +825,25 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
                 : `Generating… ${generatedCount} / ${totalCount}`}
             </div>
             {approvedCount > 0 && (
-              <button
-                onClick={handleSendApproved}
-                disabled={isSending || !allGenerated}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSending
-                  ? <><Loader2 size={11} className="animate-spin" />Sending...</>
-                  : <><SendHorizontal size={11} />Send Approved ({approvedCount})</>}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSendApproved}
+                  disabled={isSending || !allGenerated}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSending
+                    ? <><Loader2 size={11} className="animate-spin" />Sending...</>
+                    : <><SendHorizontal size={11} />Send Now ({approvedCount})</>}
+                </button>
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  disabled={isSending || !allGenerated}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Calendar size={11} />
+                  Schedule ({approvedCount})
+                </button>
+              </div>
             )}
           </div>
 
@@ -616,6 +933,104 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
             })
           )}
         </div>
+      )}
+
+      {/* ── Scheduled tab ── */}
+      {tab === 'scheduled' && (
+        <div>
+          {/* Day filter + bulk actions */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+              {[
+                { id: 'all',      label: 'All' },
+                { id: 'today',    label: 'Today' },
+                { id: 'tomorrow', label: 'Tomorrow' },
+                { id: 'week',     label: 'This week' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => { setDayFilter(f.id); setSelectedScheduled(new Set()); }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    dayFilter === f.id ? 'bg-slate-100 text-slate-700' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {selectedScheduled.size > 0 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-xs text-slate-500">{selectedScheduled.size} selected</span>
+                <button
+                  onClick={() => setShowRescheduleModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Calendar size={11} />
+                  Reschedule
+                </button>
+                <button
+                  onClick={handleBulkCancel}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <Trash2 size={11} />
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {scheduledLoading ? (
+            <div className="flex items-center justify-center py-16 text-slate-400">
+              <Loader2 size={18} className="animate-spin mr-2" />
+              Loading...
+            </div>
+          ) : visibleScheduled.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-16">
+              {dayFilter !== 'all' ? 'No scheduled emails in this period.' : 'No scheduled emails yet — approve pitches and click "Schedule" to queue them.'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {visibleScheduled.map(item => (
+                <ScheduledCard
+                  key={item.id}
+                  item={item}
+                  checked={selectedScheduled.has(item.id)}
+                  onCheck={() => toggleScheduledSelect(item.id)}
+                  onEdit={() => setEditingScheduled(item)}
+                  onCancel={() => handleCancelOne(item.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modals */}
+      {showScheduleModal && (
+        <ScheduleModal
+          title={`Schedule ${approvedCount} email${approvedCount === 1 ? '' : 's'}`}
+          subtitle={approvedCount > 1 ? `All ${approvedCount} approved emails will send at this time.` : null}
+          onConfirm={handleScheduleApproved}
+          onClose={() => setShowScheduleModal(false)}
+        />
+      )}
+
+      {showRescheduleModal && (
+        <ScheduleModal
+          title={`Reschedule ${selectedScheduled.size} email${selectedScheduled.size === 1 ? '' : 's'}`}
+          subtitle={selectedScheduled.size > 1 ? `All ${selectedScheduled.size} selected emails will be moved to this time.` : null}
+          onConfirm={handleBulkReschedule}
+          onClose={() => setShowRescheduleModal(false)}
+        />
+      )}
+
+      {editingScheduled && (
+        <EditScheduledModal
+          item={editingScheduled}
+          onSave={handleSaveEdit}
+          onClose={() => setEditingScheduled(null)}
+        />
       )}
     </div>
   );
