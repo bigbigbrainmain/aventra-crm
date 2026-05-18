@@ -44,9 +44,11 @@ ${context}
 
 Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
+- Start with just the lead's first name and a comma (e.g. "John,") — no "Hi", no "Hey"
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
-- Do NOT include any sign-off or signature — that is added separately
+- Close with "Best regards," on its own line before the sign-off
+- Do NOT include any sign-off or signature after "Best regards," — that is added separately
 - NO marketing speak, NO exclamation marks, NO templates
 
 Return ONLY valid JSON in this exact format, nothing else:
@@ -58,13 +60,15 @@ ${context}
 
 Rules:
 - Subject line: curiosity-driven, no exclamation marks, not salesy, under 10 words
+- Start with just the lead's first name and a comma (e.g. "John,") — no "Hi", no "Hey"
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
 - If they have no website: lead with that pain point (they're missing enquiries from people searching online)
 - If they have a website: mention you spotted a couple of ideas to help them get more local work
 - If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
 - End with a tiny low-pressure ask (free mockup, or happy to send ideas)
-- Do NOT include any sign-off or signature — that is added separately
+- Close with "Best regards," on its own line before the sign-off
+- Do NOT include any sign-off or signature after "Best regards," — that is added separately
 - NO unsubscribe links, NO marketing speak, NO exclamation marks
 
 Return ONLY valid JSON in this exact format, nothing else:
