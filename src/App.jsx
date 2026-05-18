@@ -182,6 +182,7 @@ function CRMApp() {
               <OutreachView
                 leads={leads}
                 onSelectLead={(lead) => selectLead(lead, 'outreach')}
+                onRefresh={loadData}
               />
             } />
             <Route path="/contracts" element={<ContractsView />} />
