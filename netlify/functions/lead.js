@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findLead(leadId) {
-  const rows = await getRange(TABS.LEADS, 'A2:W');
+  const rows = await getRange(TABS.LEADS, 'A2:X');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === leadId) {
       return { lead: rowToLead(rows[i], i + 2), rowNum: i + 2 };
@@ -101,6 +101,7 @@ exports.handler = async (event) => {
         updated.lastOutreachAt || '',
         updated.emailOpenedAt || '',
         updated.outreachOptedOut || '',
+        updated.primaryContact || '',
       ];
       await updateRow(TABS.LEADS, result.rowNum, row);
 

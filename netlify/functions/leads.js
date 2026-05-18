@@ -12,7 +12,7 @@ exports.handler = async (event) => {
 
   try {
     if (event.httpMethod === 'GET') {
-      const rows = await getRange(TABS.LEADS, 'A2:W');
+      const rows = await getRange(TABS.LEADS, 'A2:X');
       const leads = rows
         .map((row, i) => rowToLead(row, i + 2))
         .filter(l => l.id);
@@ -41,6 +41,8 @@ exports.handler = async (event) => {
         'FALSE',
         '',
         data.proposalFolder || '',
+        '', '', '', 0, '', '', '',
+        data.primaryContact || '',
       ];
       await appendRow(TABS.LEADS, row);
       return { statusCode: 201, headers: HEADERS, body: JSON.stringify({ id }) };
