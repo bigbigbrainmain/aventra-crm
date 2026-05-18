@@ -294,6 +294,7 @@ export default function ChatSection({ entityId, entityType, entityName, focusThr
   const [showComposer, setShowComposer] = useState(false);
   const [newBody, setNewBody] = useState('');
   const [posting, setPosting] = useState(false);
+  const [sectionOpen, setSectionOpen] = useState(!!focusThreadId);
 
   useEffect(() => {
     const q = query(
@@ -345,47 +346,62 @@ export default function ChatSection({ entityId, entityType, entityName, focusThr
   const openCount = threads.filter(t => !t.isResolved).length;
 
   return (
-    <div className="border-t border-slate-100 pt-5 mt-5">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+    <div className="border-t border-slate-100 pt-4 mt-4">
+      <button
+        type="button"
+        onClick={() => setSectionOpen(o => !o)}
+        className="flex items-center justify-between w-full group py-0.5"
+      >
+        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 group-hover:text-slate-600 transition-colors">
           <MessageSquare size={11} />
           Chats {openCount > 0 && <span className="text-blue-500">({openCount} open)</span>}
         </h4>
-        <button
-          onClick={() => setShowComposer(v => !v)}
-          className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
-        >
-          <Plus size={12} />
-          New thread
-        </button>
-      </div>
+        <ChevronDown
+          size={13}
+          className={`text-slate-300 transition-transform duration-150 ${sectionOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
 
-      {showComposer && (
-        <div className="mb-3">
-          <MentionComposer
-            value={newBody}
-            onChange={setNewBody}
-            onPost={handlePost}
-            posting={posting}
-            placeholder="Start a thread... use @ollie or @joe to notify someone"
-            autoFocus
-          />
+      {sectionOpen && (
+        <div className="mt-3">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setShowComposer(v => !v)}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
+            >
+              <Plus size={12} />
+              New thread
+            </button>
+          </div>
+
+          {showComposer && (
+            <div className="mb-3">
+              <MentionComposer
+                value={newBody}
+                onChange={setNewBody}
+                onPost={handlePost}
+                posting={posting}
+                placeholder="Start a thread... use @ollie or @joe to notify someone"
+                autoFocus
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {threads.map(thread => (
+              <ThreadCard
+                key={thread.id}
+                thread={thread}
+                entityName={entityName}
+                focusThreadId={focusThreadId}
+              />
+            ))}
+            {threads.length === 0 && !showComposer && (
+              <p className="text-xs text-slate-400 text-center py-2">No threads yet</p>
+            )}
+          </div>
         </div>
       )}
-
-      <div className="space-y-2">
-        {threads.map(thread => (
-          <ThreadCard
-            key={thread.id}
-            thread={thread}
-            entityName={entityName}
-            focusThreadId={focusThreadId}
-          />
-        ))}
-        {threads.length === 0 && !showComposer && (
-          <p className="text-xs text-slate-400 text-center py-2">No threads yet</p>
-        )}
-      </div>
     </div>
   );
 }

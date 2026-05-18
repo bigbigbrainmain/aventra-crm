@@ -4,7 +4,7 @@ import {
   X, Mail, Phone, ExternalLink, Tag, Calendar,
   Plus, Check, Trash2, AlertCircle, ChevronDown,
   ChevronRight, Star, Pencil, Maximize2, Minimize2, UserCheck,
-  Loader2, SendHorizontal,
+  Loader2, SendHorizontal, Eye,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
@@ -17,14 +17,28 @@ const FROM_LABELS = {
   outreach: 'Outreach',
 };
 
-function Section({ title, children, action }) {
+function Section({ title, children, action, noBorderTop = false, forceOpen = false }) {
+  const [open, setOpen] = useState(false);
+  const isOpen = open || forceOpen;
   return (
-    <div className="border-t border-slate-100 pt-5 mt-5">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</h4>
-        {action}
-      </div>
-      {children}
+    <div className={noBorderTop ? 'mb-1' : 'border-t border-slate-100 pt-4 mt-4'}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center justify-between w-full group py-0.5"
+      >
+        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider group-hover:text-slate-600 transition-colors">
+          {title}
+        </h4>
+        <div className="flex items-center gap-2">
+          {action && <span onClick={e => e.stopPropagation()}>{action}</span>}
+          <ChevronDown
+            size={13}
+            className={`text-slate-300 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+      {isOpen && <div className="mt-3">{children}</div>}
     </div>
   );
 }
@@ -61,6 +75,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [newTaskDue, setNewTaskDue] = useState('');
   const [addingNote, setAddingNote] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftSubject, setDraftSubject] = useState(lead.subject || '');
@@ -98,6 +113,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     setDraftBody(lead.emailBody || '');
     setOutreachSent(false);
     setOutreachError('');
+    setShowAllNotes(false);
   }, [lead.id]);
 
   // Status change — auto-save
@@ -300,6 +316,33 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const completedTasks  = tasks.filter(t => t.completed);
   const priorityCfg = getPriorityStyle(lead.priority);
 
+  const emailTimeline = [];
+  if (lead.outreachSentAt) {
+    emailTimeline.push({
+      type: 'sent',
+      label: lead.outreachCount > 1 ? 'First email sent' : 'Email sent',
+      timestamp: lead.outreachSentAt,
+      subject: lead.subject || null,
+    });
+  }
+  if (lead.outreachCount > 1 && lead.lastOutreachAt && lead.lastOutreachAt !== lead.outreachSentAt) {
+    emailTimeline.push({
+      type: 'sent',
+      label: 'Follow-up sent',
+      timestamp: lead.lastOutreachAt,
+      subject: lead.subject || null,
+      extra: `${lead.outreachCount} total`,
+    });
+  }
+  if (lead.emailOpenedAt) {
+    emailTimeline.push({
+      type: 'opened',
+      label: 'Email opened',
+      timestamp: lead.emailOpenedAt,
+    });
+  }
+  emailTimeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
   const handleGraduate = async (formData) => {
     await api.graduateProposal({ leadId: lead.id, folderName: lead.proposalFolder, ...formData });
     onUpdate({ ...lead, status: 'Won' });
@@ -391,12 +434,8 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-4">
-          {/* Contact info */}
+          {/* Contact info — always visible */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contact</span>
-            </div>
-
             {editing ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -687,6 +726,48 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
             )}
           </Section>
 
+          {/* Email Timeline */}
+          <Section title="Email Timeline">
+            {emailTimeline.length > 0 ? (
+              <div className="space-y-3">
+                {emailTimeline.map((ev, i) => (
+                  <div key={i} className="flex gap-3 items-start">
+                    <div className={`mt-0.5 p-1.5 rounded-full shrink-0 ${
+                      ev.type === 'opened' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'
+                    }`}>
+                      {ev.type === 'opened' ? <Eye size={11} /> : <SendHorizontal size={11} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-slate-700">{ev.label}</p>
+                        {ev.extra && <span className="text-xs text-slate-400 shrink-0">{ev.extra}</span>}
+                      </div>
+                      {ev.subject && (
+                        <p className="text-xs text-slate-500 truncate mt-0.5">"{ev.subject}"</p>
+                      )}
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {new Date(ev.timestamp).toLocaleString('en-GB', {
+                          day: 'numeric', month: 'short', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })} · {timeAgo(ev.timestamp)}
+                      </p>
+                      {lead.email && ev.type === 'sent' && (
+                        <a
+                          href={`mailto:${lead.email}`}
+                          className="text-xs text-blue-500 hover:text-blue-700 transition-colors mt-0.5 block"
+                        >
+                          {lead.email}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 text-center py-2">No email activity yet</p>
+            )}
+          </Section>
+
           {/* Notes */}
           <Section title={`Notes (${notes.length})`}>
             {/* Add note */}
@@ -711,7 +792,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
 
             {/* Note list */}
             <div className="space-y-2">
-              {notes.map(note => (
+              {(showAllNotes ? notes : notes.slice(0, 1)).map(note => (
                 <div
                   key={note.id}
                   className={`flex gap-2 p-3 rounded-lg border transition-colors ${note.actioned ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}`}
@@ -741,6 +822,22 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
               ))}
               {notes.length === 0 && (
                 <p className="text-xs text-slate-400 text-center py-2">No notes yet</p>
+              )}
+              {notes.length > 1 && !showAllNotes && (
+                <button
+                  onClick={() => setShowAllNotes(true)}
+                  className="w-full text-xs text-slate-400 hover:text-blue-600 py-1.5 border border-dashed border-slate-200 rounded-lg hover:border-blue-300 transition-colors"
+                >
+                  Show {notes.length - 1} more note{notes.length - 1 !== 1 ? 's' : ''}
+                </button>
+              )}
+              {showAllNotes && notes.length > 1 && (
+                <button
+                  onClick={() => setShowAllNotes(false)}
+                  className="w-full text-xs text-slate-400 hover:text-slate-600 py-1 transition-colors"
+                >
+                  Show less
+                </button>
               )}
             </div>
           </Section>
