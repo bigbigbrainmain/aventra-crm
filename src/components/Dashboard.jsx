@@ -7,15 +7,16 @@ import {
 import { getStatusStyle, isDueToday, isOverdue } from '../utils/constants';
 
 const STATUS_COLORS = {
-  'New':        '#94a3b8',
-  'Working':    '#60a5fa',
-  'HOT':        '#fb923c',
-  'Booked':     '#fbbf24',
-  'Closed Won': '#4ade80',
-  'Lost':       '#f87171',
+  'New':                '#94a3b8',
+  'Working':            '#60a5fa',
+  'HOT':                '#fb923c',
+  'Proposal Requested': '#6366f1',
+  'Booked':             '#fbbf24',
+  'Closed Won':         '#4ade80',
+  'Lost':               '#f87171',
 };
 
-const FUNNEL_STAGES = ['New', 'Working', 'HOT', 'Booked', 'Closed Won'];
+const FUNNEL_STAGES = ['New', 'Working', 'HOT', 'Proposal Requested', 'Booked', 'Closed Won'];
 
 const RANGE_OPTIONS = [
   { label: 'Last 3 months',  value: 3  },
@@ -387,14 +388,15 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
-        <StatCard label="Total Leads"  value={analytics?.totalLeads || 0}                         onClick={() => setView('leads')} />
-        <StatCard label="New"          value={analytics?.byStatus?.['New'] || 0}        color="text-slate-500"  onClick={() => setView('leads')} />
-        <StatCard label="Working"      value={analytics?.byStatus?.['Working'] || 0}    color="text-blue-600"   onClick={() => setView('leads')} />
-        <StatCard label="HOT"          value={analytics?.byStatus?.['HOT'] || 0}        color="text-orange-600" onClick={() => setView('leads')} />
-        <StatCard label="Booked"       value={analytics?.byStatus?.['Booked'] || 0}     color="text-amber-600"  onClick={() => setView('leads')} />
-        <StatCard label="Closed Won"   value={analytics?.byStatus?.['Closed Won'] || 0} color="text-green-600"  onClick={() => setView('leads')} />
-        <StatCard label="Total MRR"    value={currentMrr > 0 ? `£${currentMrr.toLocaleString()}` : '—'} color="text-emerald-600" onClick={() => setView('customers')} />
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+        <StatCard label="Total Leads"         value={analytics?.totalLeads || 0}                                   onClick={() => setView('leads')} />
+        <StatCard label="New"                 value={analytics?.byStatus?.['New'] || 0}                color="text-slate-500"   onClick={() => setView('leads')} />
+        <StatCard label="Working"             value={analytics?.byStatus?.['Working'] || 0}            color="text-blue-600"    onClick={() => setView('leads')} />
+        <StatCard label="HOT"                 value={analytics?.byStatus?.['HOT'] || 0}                color="text-orange-600"  onClick={() => setView('leads')} />
+        <StatCard label="Proposal Requested"  value={analytics?.byStatus?.['Proposal Requested'] || 0} color="text-indigo-600"  onClick={() => setView('leads')} />
+        <StatCard label="Booked"              value={analytics?.byStatus?.['Booked'] || 0}             color="text-amber-600"   onClick={() => setView('leads')} />
+        <StatCard label="Closed Won"          value={analytics?.byStatus?.['Closed Won'] || 0}         color="text-green-600"   onClick={() => setView('leads')} />
+        <StatCard label="Total MRR"           value={currentMrr > 0 ? `£${currentMrr.toLocaleString()}` : '—'} color="text-emerald-600" onClick={() => setView('customers')} />
       </div>
 
       {/* Funnel + Closed Won by month */}
