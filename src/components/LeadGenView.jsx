@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Zap, Search, Globe, Mail, ChevronDown, AlertTriangle, CheckCircle2, XCircle, Loader2, RotateCcw } from 'lucide-react';
+import { Zap, Search, Globe, Mail, AlertTriangle, CheckCircle2, XCircle, Loader2, RotateCcw, ClipboardList } from 'lucide-react';
 import { api } from '../utils/api';
+import LeadReviewModal from './LeadReviewModal';
 
 const INDUSTRIES = [
   'plumber', 'electrician', 'builder', 'roofer', 'painter decorator',
@@ -76,6 +77,7 @@ export default function LeadGenView() {
   const [step2, setStep2] = useState(stepInitial());
   const [step3, setStep3] = useState(stepInitial());
   const [log, setLog] = useState([]);
+  const [reviewLeads, setReviewLeads] = useState(null);
 
   function addLog(message, type = 'info') {
     setLog(prev => [{ message, type, id: Date.now() + Math.random() }, ...prev].slice(0, 50));
@@ -89,7 +91,8 @@ export default function LeadGenView() {
       const result = await api.leadGenFind(industry.trim(), city.trim());
       setStep1({ status: 'done', result, error: null });
       addLog(`Found ${result.total} places — added ${result.added} new to sheet`, 'success');
-      result.names?.forEach(n => addLog(`  + ${n}`, 'success'));
+      result.leads?.forEach(l => addLog(`  + ${l.name}`, 'success'));
+      if (result.leads?.length > 0) setReviewLeads(result.leads);
     } catch (err) {
       setStep1({ status: 'error', result: null, error: err.message });
       addLog(`Find failed: ${err.message}`, 'error');
@@ -212,6 +215,15 @@ export default function LeadGenView() {
           result={step1.result && (
             <span className="font-medium">{step1.result.added} added</span>
           )}
+          extra={step1.result?.leads?.length > 0 && (
+            <button
+              onClick={() => setReviewLeads(step1.result.leads)}
+              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors mt-1.5"
+            >
+              <ClipboardList size={12} />
+              Review {step1.result.leads.length} leads
+            </button>
+          )}
         />
 
         {/* Step 2: Score websites */}
@@ -245,6 +257,13 @@ export default function LeadGenView() {
         />
       </div>
 
+      {reviewLeads && (
+        <LeadReviewModal
+          leads={reviewLeads}
+          onClose={() => setReviewLeads(null)}
+        />
+      )}
+
       {/* Activity log */}
       {log.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-1.5">
@@ -259,7 +278,7 @@ export default function LeadGenView() {
   );
 }
 
-function StepCard({ icon, number, title, description, state, disabled, disabledReason, buttonLabel, onRun, result, allowRerun }) {
+function StepCard({ icon, number, title, description, state, disabled, disabledReason, buttonLabel, onRun, result, allowRerun, extra }) {
   const isLoading = state.status === 'loading';
   const isDone = state.status === 'done';
   const isError = state.status === 'error';
@@ -285,6 +304,7 @@ function StepCard({ icon, number, title, description, state, disabled, disabledR
           {disabled && disabledReason && (
             <p className="text-xs text-slate-400 mt-1">{disabledReason}</p>
           )}
+          {extra}
         </div>
         <button
           onClick={onRun}

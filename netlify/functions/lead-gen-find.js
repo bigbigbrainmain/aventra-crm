@@ -67,19 +67,20 @@ exports.handler = async (event) => {
     );
 
     const rowsToAdd = [];
-    const addedNames = [];
+    const addedLeads = [];
 
     for (const lead of detailResults) {
       const key = lead.name.trim().toLowerCase();
       if (!key || existingNames.has(key)) continue;
       existingNames.add(key);
-      addedNames.push(lead.name);
+      const id = genId('G');
       rowsToAdd.push([
-        genId('G'), lead.name, industry, city,
+        id, lead.name, industry, city,
         '', lead.phone, lead.website,
         '', '', 'New', '', '', '', '', 'No',
         'FALSE', '', '', '', 0, '', '', '', '',
       ]);
+      addedLeads.push({ id, name: lead.name, industry, city, phone: lead.phone, website: lead.website });
     }
 
     if (rowsToAdd.length) await appendRows(TABS.LEADS, rowsToAdd);
@@ -87,7 +88,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ added: addedNames.length, total: places.length, names: addedNames }),
+      body: JSON.stringify({ added: addedLeads.length, total: places.length, leads: addedLeads }),
     };
   } catch (err) {
     console.error('lead-gen-find error:', err);
