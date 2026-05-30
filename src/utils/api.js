@@ -76,6 +76,11 @@ export const api = {
   generateOutreach: (leadId) => req('/generate-outreach', { method: 'POST', body: JSON.stringify({ leadId }) }),
   sendOutreach:     (leadId) => req('/send-outreach',     { method: 'POST', body: JSON.stringify({ leadId }) }),
 
+  // Lead Generation
+  leadGenFind:   (industry, city) => req('/lead-gen-find',   { method: 'POST', body: JSON.stringify({ industry, city }) }),
+  leadGenScore:  (limit)          => req('/lead-gen-score',  { method: 'POST', body: JSON.stringify({ limit: limit || 5 }) }),
+  leadGenEmails: (limit)          => req('/lead-gen-emails', { method: 'POST', body: JSON.stringify({ limit: limit || 5 }) }),
+
   // Scheduled emails
   getScheduledEmails:   ()         => req('/schedule-email'),
   createScheduledEmail: (data)     => req('/schedule-email',        { method: 'POST',   body: JSON.stringify(data) }),

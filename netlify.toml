@@ -6,6 +6,15 @@
 [functions."auto-followup"]
   schedule = "0 8 * * *"
 
+[functions."lead-gen-find"]
+  timeout = 26
+
+[functions."lead-gen-score"]
+  timeout = 26
+
+[functions."lead-gen-emails"]
+  timeout = 26
+
 [functions."scheduled-send"]
   schedule = "0 * * * *"
 

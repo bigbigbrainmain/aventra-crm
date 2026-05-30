@@ -189,6 +189,17 @@ async function appendRow(tab, row) {
   });
 }
 
+async function appendRows(tab, rows) {
+  if (!rows.length) return;
+  const sheets = getClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${tab}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: rows },
+  });
+}
+
 async function updateCell(tab, cellRef, value) {
   const sheets = getClient();
   await sheets.spreadsheets.values.update({
@@ -266,6 +277,7 @@ async function updateRange(tab, startCell, values) {
 module.exports = {
   SHEET_ID,
   TABS,
+  appendRows,
   rowToLead,
   rowToNote,
   rowToTask,
