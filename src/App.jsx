@@ -192,7 +192,7 @@ function CRMApp() {
               />
             } />
             <Route path="/lead-gen" element={
-              <LeadGenView leads={leads} onRefresh={loadData} />
+              <LeadGenView onRefresh={loadData} />
             } />
             <Route path="/contracts" element={<ContractsView />} />
             <Route path="/customers" element={<CustomersView />} />

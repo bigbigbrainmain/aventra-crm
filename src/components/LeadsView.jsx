@@ -167,6 +167,7 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [selectedEmailStages, setSelectedEmailStages] = useState([]);
+  const [websiteFilter, setWebsiteFilter] = useState(null); // null | 'has' | 'none'
   const [search, setSearch] = useState('');
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
@@ -193,13 +194,14 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
     const matchNotHidden  = !hiddenStatuses.includes(l.status);
     const matchPriority   = selectedPriorities.length === 0    || selectedPriorities.includes(l.priority);
     const matchEmailStage = selectedEmailStages.length === 0   || selectedEmailStages.includes(getEmailStage(l, scheduledLeadIds));
+    const matchWebsite    = websiteFilter === null || (websiteFilter === 'has' ? !!l.website : !l.website);
     const q = search.toLowerCase();
     const matchSearch     = !q ||
       l.businessName.toLowerCase().includes(q) ||
       l.industry.toLowerCase().includes(q) ||
       l.city.toLowerCase().includes(q) ||
       l.email.toLowerCase().includes(q);
-    return matchStatus && matchNotHidden && matchPriority && matchEmailStage && matchSearch;
+    return matchStatus && matchNotHidden && matchPriority && matchEmailStage && matchWebsite && matchSearch;
   });
 
   // In "All" tab, sort favourites to top
@@ -207,7 +209,7 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
     ? [...filtered].sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
     : filtered;
 
-  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmailStages.length > 0 || hiddenStatuses.length > 0 || search;
+  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmailStages.length > 0 || websiteFilter !== null || hiddenStatuses.length > 0 || search;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -314,6 +316,20 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
           }}
         />
 
+        {/* Website filter */}
+        <button
+          onClick={() => setWebsiteFilter(v => v === null ? 'none' : v === 'none' ? 'has' : null)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors whitespace-nowrap
+            ${websiteFilter !== null
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+        >
+          Website
+          {websiteFilter === 'has' && <span className="text-emerald-300 font-bold">✓</span>}
+          {websiteFilter === 'none' && <span className="text-red-300 font-bold">✗</span>}
+        </button>
+
         {/* Email stage filter */}
         <MultiSelect
           label="Email"
@@ -335,7 +351,7 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
         {/* Clear all */}
         {anyFilter && (
           <button
-            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); setSelectedEmailStages([]); updateHiddenStatuses(['Lost']); setSearch(''); }}
+            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); setSelectedEmailStages([]); setWebsiteFilter(null); updateHiddenStatuses(['Lost']); setSearch(''); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Clear all

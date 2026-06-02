@@ -1,22 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Check, Trash2 } from 'lucide-react';
-
-const TIMER_SECONDS = 15;
 
 export default function LeadReviewModal({ leads, onClose, onDiscard }) {
   const [index, setIndex] = useState(0);
   const [kept, setKept] = useState(0);
   const [discarded, setDiscarded] = useState(0);
   const [done, setDone] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TIMER_SECONDS);
   const [exiting, setExiting] = useState(false);
-  const timerRef = useRef(null);
 
   const current = leads[index];
 
   const advance = useCallback((action) => {
     if (exiting) return;
-    clearInterval(timerRef.current);
     setExiting(true);
 
     if (action === 'discard') {
@@ -37,25 +32,6 @@ export default function LeadReviewModal({ leads, onClose, onDiscard }) {
     }, 180);
   }, [exiting, index, leads, onDiscard]);
 
-  const advanceRef = useRef(advance);
-  useEffect(() => { advanceRef.current = advance; }, [advance]);
-
-  useEffect(() => {
-    if (done) return;
-    setTimeLeft(TIMER_SECONDS);
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          advanceRef.current('keep');
-          return TIMER_SECONDS;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [index, done]);
-
   useEffect(() => {
     function onKey(e) {
       if (done) { if (e.key === 'Escape') onClose(); return; }
@@ -66,9 +42,6 @@ export default function LeadReviewModal({ leads, onClose, onDiscard }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [advance, done, onClose]);
-
-  const pct = (timeLeft / TIMER_SECONDS) * 100;
-  const barColor = pct > 60 ? 'bg-emerald-500' : pct > 30 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -89,10 +62,6 @@ export default function LeadReviewModal({ leads, onClose, onDiscard }) {
           </div>
         ) : (
           <>
-            <div className="h-1 bg-slate-100">
-              <div className={`h-1 transition-all duration-1000 ${barColor}`} style={{ width: `${pct}%` }} />
-            </div>
-
             <div className="bg-slate-900 px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -159,7 +128,7 @@ export default function LeadReviewModal({ leads, onClose, onDiscard }) {
               )}
 
               <p className="text-xs text-slate-400 text-right pt-1">
-                {timeLeft}s — auto-keep · <kbd className="font-mono">K</kbd> keep · <kbd className="font-mono">D</kbd> discard
+                <kbd className="font-mono">K</kbd> keep · <kbd className="font-mono">D</kbd> discard
               </p>
             </div>
 
