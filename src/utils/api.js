@@ -66,6 +66,11 @@ export const api = {
   // Graduate proposal → live customer
   graduateProposal: (data)          => req('/proposal-graduate', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Lead Gen
+  leadGenFind:   (data)     => req('/lead-gen-find',   { method: 'POST', body: JSON.stringify(data) }),
+  leadGenScore:  (leadIds)  => req('/lead-gen-score',  { method: 'POST', body: JSON.stringify({ leadIds }) }),
+  leadGenEmails: (leadIds)  => req('/lead-gen-emails', { method: 'POST', body: JSON.stringify({ leadIds }) }),
+
   // Setup
   setup:        ()          => req('/setup', { method: 'POST' }),
 

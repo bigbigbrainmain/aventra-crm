@@ -9,6 +9,7 @@ import CustomersView from './components/CustomersView';
 import DocumentsView from './components/DocumentsView';
 import AddonsView from './components/AddonsView';
 import OutreachView from './components/OutreachView';
+import LeadGenView from './components/LeadGenView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import LoginScreen from './components/LoginScreen';
@@ -189,6 +190,9 @@ function CRMApp() {
                 onSelectLead={(lead) => selectLead(lead, 'outreach')}
                 onRefresh={loadData}
               />
+            } />
+            <Route path="/lead-gen" element={
+              <LeadGenView leads={leads} onRefresh={loadData} />
             } />
             <Route path="/contracts" element={<ContractsView />} />
             <Route path="/customers" element={<CustomersView />} />

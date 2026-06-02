@@ -9,6 +9,12 @@
 [functions."scheduled-send"]
   schedule = "0 * * * *"
 
+[functions."lead-gen-score"]
+  timeout = 26
+
+[functions."lead-gen-emails"]
+  timeout = 26
+
 [dev]
   command = "npm run dev"
   port = 8888

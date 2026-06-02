@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal, PenLine } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal, PenLine, Search } from 'lucide-react';
 import { api } from '../utils/api';
 import SignatureModal from './SignatureModal';
 
@@ -8,6 +8,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard',      Icon: LayoutDashboard },
   { id: 'leads',     label: 'All Leads',      Icon: Users            },
   { id: 'outreach',  label: 'Outreach',       Icon: SendHorizontal   },
+  { id: 'lead-gen',  label: 'Lead Gen',       Icon: Search           },
   { id: 'customers', label: 'Live Customers', Icon: Globe            },
   { id: 'addons',    label: 'Add-ons',        Icon: Package          },
   { id: 'tasks',     label: 'Tasks',          Icon: CheckSquare      },
