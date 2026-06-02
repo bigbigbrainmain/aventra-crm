@@ -169,7 +169,6 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
   const [selectedEmailStages, setSelectedEmailStages] = useState([]);
   const [websiteFilter, setWebsiteFilter] = useState(null); // null | 'has' | 'none'
   const [sortBy, setSortBy] = useState('default');
-  const [sortBy, setSortBy] = useState('default');
   const [search, setSearch] = useState('');
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
