@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Shuffle, AlertTriangle } from 'lucide-react';
+import { Search, Shuffle } from 'lucide-react';
 import { api } from '../utils/api';
 import LeadReviewModal from './LeadReviewModal';
 
@@ -31,6 +31,7 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 export default function LeadGenView({ onRefresh }) {
   const [industry, setIndustry] = useState('');
   const [city, setCity] = useState('');
+  const [noWebsiteOnly, setNoWebsiteOnly] = useState(false);
   const [finding, setFinding] = useState(false);
   const [findResult, setFindResult] = useState(null);
   const [reviewLeads, setReviewLeads] = useState(null);
@@ -50,8 +51,9 @@ export default function LeadGenView({ onRefresh }) {
     setFindResult(null);
     try {
       const result = await api.leadGenFind({ industry: q, city: c });
-      setFindResult(result);
-      if (result.leads?.length > 0) setReviewLeads(result.leads);
+      const leads = noWebsiteOnly ? result.leads.filter(l => !l.website) : result.leads;
+      setFindResult({ ...result, leads, count: leads.length });
+      if (leads.length > 0) setReviewLeads(leads);
     } catch (err) {
       setFindResult({ error: err.message });
     } finally {
@@ -67,13 +69,6 @@ export default function LeadGenView({ onRefresh }) {
       </div>
 
       <div className="p-6 space-y-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-2">
-          <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
-          <p className="text-amber-800 text-sm">
-            <strong>Under construction.</strong> Requires <code className="text-xs bg-amber-100 px-1 rounded">GOOGLE_API_KEY</code> in Netlify environment variables with Places API enabled.
-          </p>
-        </div>
-
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="flex items-center gap-2 mb-4">
             <Search size={15} className="text-slate-500" />
@@ -113,7 +108,24 @@ export default function LeadGenView({ onRefresh }) {
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 mb-3">Leave fields blank to pick a random combo automatically.</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-slate-400">Leave fields blank to pick a random combo.</p>
+            <button
+              onClick={() => setNoWebsiteOnly(v => !v)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                noWebsiteOnly
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                noWebsiteOnly ? 'bg-white border-white' : 'border-slate-300'
+              }`}>
+                {noWebsiteOnly && <span className="text-blue-600 text-xs leading-none font-bold">✓</span>}
+              </span>
+              No website only
+            </button>
+          </div>
 
           {findResult && (
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
