@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star, Clock, Eye, ArrowUpDown } from 'lucide-react';
-import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG, EMAIL_STAGE_CONFIG, EMAIL_STAGES, getEmailStage } from '../utils/constants';
-
-const PRIORITIES = Object.keys(PRIORITY_CONFIG);
+import { getStatusStyle, STATUSES, EMAIL_STAGE_CONFIG, EMAIL_STAGES, getEmailStage } from '../utils/constants';
 
 // Multi-select dropdown component
 function MultiSelect({ label, options, selected, onChange, renderOption, activeClassName }) {
@@ -104,7 +102,6 @@ function EmailStageBadge({ stage, count }) {
 }
 
 function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
-  const p = getPriorityStyle(lead.priority);
   return (
     <div
       onClick={onClick}
@@ -112,7 +109,6 @@ function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          {p && <span className={`w-2 h-2 rounded-full shrink-0 ${p.dot}`} />}
           <p className="font-semibold text-slate-900 text-sm truncate">{lead.businessName}</p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -150,12 +146,7 @@ function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
-        {p ? (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.bg} ${p.text}`}>
-            {lead.priority}
-          </span>
-        ) : <span />}
+      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-end gap-2">
         <EmailStageBadge stage={emailStage} count={lead.outreachCount || 0} />
       </div>
     </div>
@@ -165,7 +156,6 @@ function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
 export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, onRefresh, onToggleFavourite }) {
   const [tab, setTab] = useState('all');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
-  const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [selectedEmailStages, setSelectedEmailStages] = useState([]);
   const [websiteFilter, setWebsiteFilter] = useState(null); // null | 'has' | 'none'
   const [sortBy, setSortBy] = useState('default');
@@ -193,7 +183,6 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
   const filtered = baseList.filter(l => {
     const matchStatus     = selectedStatuses.length === 0      || selectedStatuses.includes(l.status);
     const matchNotHidden  = !hiddenStatuses.includes(l.status);
-    const matchPriority   = selectedPriorities.length === 0    || selectedPriorities.includes(l.priority);
     const matchEmailStage = selectedEmailStages.length === 0   || selectedEmailStages.includes(getEmailStage(l, scheduledLeadIds));
     const matchWebsite    = websiteFilter === null || (websiteFilter === 'has' ? !!l.website : !l.website);
     const q = search.toLowerCase();
@@ -202,32 +191,31 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
       l.industry.toLowerCase().includes(q) ||
       l.city.toLowerCase().includes(q) ||
       l.email.toLowerCase().includes(q);
-    return matchStatus && matchNotHidden && matchPriority && matchEmailStage && matchWebsite && matchSearch;
+    return matchStatus && matchNotHidden && matchEmailStage && matchWebsite && matchSearch;
   });
 
-  const PRIORITY_ORDER = { 'Priority 1': 0, 'Priority 2': 1, 'Priority 3': 2, 'Skip': 3 };
+  function idToTimestamp(id) {
+    const part = (id || '').split('_')[1] || '';
+    return parseInt(part.slice(0, -3) || '0', 36);
+  }
 
   const sorted = useMemo(() => {
     const copy = [...filtered];
     switch (sortBy) {
-      case 'priority':
-        return copy.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 4) - (PRIORITY_ORDER[b.priority] ?? 4));
       case 'name':
         return copy.sort((a, b) => a.businessName.localeCompare(b.businessName));
-      case 'recent':
-        return copy.sort((a, b) => b.id.localeCompare(a.id));
       case 'outreach':
         return copy.sort((a, b) => (b.lastOutreachAt || '').localeCompare(a.lastOutreachAt || ''));
       case 'status':
         return copy.sort((a, b) => a.status.localeCompare(b.status));
-      default:
-        return tab === 'all'
-          ? copy.sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
-          : copy;
+      case 'favourites':
+        return copy.sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0));
+      default: // recently added
+        return copy.sort((a, b) => idToTimestamp(b.id) - idToTimestamp(a.id));
     }
   }, [filtered, sortBy, tab]);
 
-  const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmailStages.length > 0 || websiteFilter !== null || hiddenStatuses.length > 0 || search;
+  const anyFilter = selectedStatuses.length > 0 || selectedEmailStages.length > 0 || websiteFilter !== null || hiddenStatuses.length > 0 || search;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -317,23 +305,6 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
           }}
         />
 
-        {/* Priority filter */}
-        <MultiSelect
-          label="Priority"
-          options={PRIORITIES}
-          selected={selectedPriorities}
-          onChange={setSelectedPriorities}
-          renderOption={(opt) => {
-            const p = getPriorityStyle(opt);
-            return (
-              <span className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${p.dot}`} />
-                {opt}
-              </span>
-            );
-          }}
-        />
-
         {/* Website filter */}
         <button
           onClick={() => setWebsiteFilter(v => v === null ? 'none' : v === 'none' ? 'has' : null)}
@@ -374,9 +345,8 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
             onChange={e => setSortBy(e.target.value)}
             className="appearance-none bg-transparent text-sm text-slate-600 font-medium focus:outline-none cursor-pointer pr-1"
           >
-            <option value="default">Default</option>
-            <option value="recent">Recently added</option>
-            <option value="priority">Priority</option>
+            <option value="default">Recently added</option>
+            <option value="favourites">Favourites first</option>
             <option value="name">Name A–Z</option>
             <option value="status">Status</option>
             <option value="outreach">Last outreach</option>
@@ -386,7 +356,7 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
         {/* Clear all */}
         {anyFilter && (
           <button
-            onClick={() => { setSelectedStatuses([]); setSelectedPriorities([]); setSelectedEmailStages([]); setWebsiteFilter(null); updateHiddenStatuses(['Lost']); setSearch(''); }}
+            onClick={() => { setSelectedStatuses([]); setSelectedEmailStages([]); setWebsiteFilter(null); updateHiddenStatuses(['Lost']); setSearch(''); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             Clear all
