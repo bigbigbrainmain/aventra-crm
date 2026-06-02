@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star, Clock, Eye } from 'lucide-react';
+import { Search, Mail, Phone, ExternalLink, ChevronDown, X, Star, Clock, Eye, ArrowUpDown } from 'lucide-react';
 import { getStatusStyle, getPriorityStyle, STATUSES, PRIORITY_CONFIG, EMAIL_STAGE_CONFIG, EMAIL_STAGES, getEmailStage } from '../utils/constants';
 
 const PRIORITIES = Object.keys(PRIORITY_CONFIG);
@@ -168,6 +168,8 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
   const [selectedPriorities, setSelectedPriorities] = useState([]);
   const [selectedEmailStages, setSelectedEmailStages] = useState([]);
   const [websiteFilter, setWebsiteFilter] = useState(null); // null | 'has' | 'none'
+  const [sortBy, setSortBy] = useState('default');
+  const [sortBy, setSortBy] = useState('default');
   const [search, setSearch] = useState('');
   const [hiddenStatuses, setHiddenStatuses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('crm_hiddenStatuses') || '["Lost"]'); }
@@ -204,10 +206,27 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
     return matchStatus && matchNotHidden && matchPriority && matchEmailStage && matchWebsite && matchSearch;
   });
 
-  // In "All" tab, sort favourites to top
-  const sorted = tab === 'all'
-    ? [...filtered].sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
-    : filtered;
+  const PRIORITY_ORDER = { 'Priority 1': 0, 'Priority 2': 1, 'Priority 3': 2, 'Skip': 3 };
+
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    switch (sortBy) {
+      case 'priority':
+        return copy.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 4) - (PRIORITY_ORDER[b.priority] ?? 4));
+      case 'name':
+        return copy.sort((a, b) => a.businessName.localeCompare(b.businessName));
+      case 'recent':
+        return copy.sort((a, b) => b.id.localeCompare(a.id));
+      case 'outreach':
+        return copy.sort((a, b) => (b.lastOutreachAt || '').localeCompare(a.lastOutreachAt || ''));
+      case 'status':
+        return copy.sort((a, b) => a.status.localeCompare(b.status));
+      default:
+        return tab === 'all'
+          ? copy.sort((a, b) => (b.isFavourite ? 1 : 0) - (a.isFavourite ? 1 : 0))
+          : copy;
+    }
+  }, [filtered, sortBy, tab]);
 
   const anyFilter = selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmailStages.length > 0 || websiteFilter !== null || hiddenStatuses.length > 0 || search;
 
@@ -347,6 +366,23 @@ export default function LeadsView({ leads, scheduledEmails = [], onSelectLead, o
             );
           }}
         />
+
+        {/* Sort */}
+        <div className="relative flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600">
+          <ArrowUpDown size={13} className="text-slate-400 shrink-0" />
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            className="appearance-none bg-transparent text-sm text-slate-600 font-medium focus:outline-none cursor-pointer pr-1"
+          >
+            <option value="default">Default</option>
+            <option value="recent">Recently added</option>
+            <option value="priority">Priority</option>
+            <option value="name">Name A–Z</option>
+            <option value="status">Status</option>
+            <option value="outreach">Last outreach</option>
+          </select>
+        </div>
 
         {/* Clear all */}
         {anyFilter && (
