@@ -1,4 +1,4 @@
-const { TABS, getRange, appendRow, updateCell, genId, ensureTab } = require('./_sheets');
+const { TABS, rowToLead, getRange, appendRow, genId, ensureTab } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
@@ -28,6 +28,7 @@ const CITIES = [
 const MAX_LEADS = 10;
 const COMBOS_PER_RUN = 4;
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -102,30 +103,44 @@ Return ONLY valid JSON: {"subject": "...", "body": "..."}`;
   return JSON.parse(text);
 }
 
-async function sendSummaryEmail(added, scheduled) {
+async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey || !added.length) return;
+  const total = backlogLeads.length + newLeads.length;
+  if (!apiKey || total === 0) return;
+
+  const backlogSection = backlogLeads.length ? `
+    <p style="font-size: 14px; font-weight: bold; color: #0F0F0F; margin: 0 0 8px;">From backlog (${backlogLeads.length})</p>
+    <ul style="font-size: 14px; color: #374151; line-height: 2; margin: 0 0 16px;">
+      ${backlogLeads.map(l => `<li>${l.businessName} — ${l.industry}, ${l.city} ✓ email</li>`).join('')}
+    </ul>` : '';
+
+  const newSection = newLeads.length ? `
+    <p style="font-size: 14px; font-weight: bold; color: #0F0F0F; margin: 0 0 8px;">New leads found (${newLeads.length})</p>
+    <ul style="font-size: 14px; color: #374151; line-height: 2; margin: 0 0 24px;">
+      ${newLeads.map(l => `<li>${l.businessName} — ${l.industry}, ${l.city}${l.email ? ' ✓ email' : ''}</li>`).join('')}
+    </ul>` : '';
+
   const html = `<div style="font-family: Arial, sans-serif; max-width: 560px;">
     <div style="background: #2563eb; padding: 24px 32px;">
-      <h1 style="color: white; margin: 0; font-size: 20px;">Auto lead gen: ${added.length} new leads added</h1>
+      <h1 style="color: white; margin: 0; font-size: 20px;">Auto lead gen: ${scheduledCount} emails scheduled</h1>
     </div>
     <div style="background: #f9f9f9; padding: 32px; border: 1px solid #e5e7eb;">
       <p style="font-size: 15px; color: #0F0F0F; margin-top: 0;">
-        <strong>${added.length}</strong> leads added · <strong>${scheduled}</strong> emails scheduled
+        <strong>${backlogLeads.length}</strong> from backlog · <strong>${newLeads.length}</strong> new leads · <strong>${scheduledCount}</strong> emails scheduled
       </p>
-      <ul style="font-size: 14px; color: #374151; line-height: 2; margin: 0 0 24px;">
-        ${added.map(l => `<li>${l.businessName} — ${l.industry}, ${l.city}${l.email ? ' ✓ email' : ''}</li>`).join('')}
-      </ul>
+      ${backlogSection}
+      ${newSection}
       <a href="${APP_URL}/leads" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; font-size: 14px; border-radius: 8px; display: inline-block;">View Leads →</a>
     </div>
   </div>`;
+
   await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: 'Aventra CRM <notifications@aventrasites.online>',
       to: ['joe@aventrasites.online', 'ollie@aventrasites.online'],
-      subject: `Auto lead gen: ${added.length} new leads, ${scheduled} emails scheduled`,
+      subject: `Auto lead gen: ${scheduledCount} emails scheduled (${backlogLeads.length} backlog, ${newLeads.length} new)`,
       html,
     }),
   });
@@ -138,64 +153,24 @@ exports.handler = async () => {
 
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    const existingRows = await getRange(TABS.LEADS, 'A2:B');
+    // Read full lead data — used for both dedup and backlog detection
+    const existingRows = await getRange(TABS.LEADS, 'A2:Z');
     const existingNames = new Set(existingRows.map(r => String(r[1] || '').toLowerCase().trim()));
 
-    // Pick unique combos
-    const used = new Set();
-    const combos = [];
-    while (combos.length < COMBOS_PER_RUN) {
-      const industry = pick(INDUSTRIES);
-      const city = pick(CITIES);
-      const key = `${industry}|${city}`;
-      if (!used.has(key)) { used.add(key); combos.push({ industry, city }); }
-    }
+    // Backlog: leads with email found, never contacted, not dead/opted-out
+    const backlog = existingRows
+      .map((row, i) => rowToLead(row, i + 2))
+      .filter(l =>
+        l.id &&
+        l.email &&
+        l.outreachCount === 0 &&
+        !DEAD_STATUSES.has(l.status) &&
+        l.outreachOptedOut !== 'Yes' &&
+        !l.priorityReason.includes('email:not-found')
+      );
 
-    const newLeads = [];
+    console.log(`[auto-lead-gen] Backlog: ${backlog.length} uncontacted leads with emails`);
 
-    for (const { industry, city } of combos) {
-      if (newLeads.length >= MAX_LEADS) break;
-      console.log(`[auto-lead-gen] Searching: ${industry} in ${city}`);
-      try {
-        const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': googleKey,
-            'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
-          },
-          body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
-        });
-        if (!placesRes.ok) continue;
-        const placesData = await placesRes.json();
-        for (const place of (placesData.places || [])) {
-          if (newLeads.length >= MAX_LEADS) break;
-          const name = place.displayName?.text || '';
-          if (!name || existingNames.has(name.toLowerCase().trim())) continue;
-          newLeads.push({
-            id: genId('L'),
-            businessName: name,
-            industry,
-            city,
-            phone: place.nationalPhoneNumber || '',
-            website: place.websiteUri || '',
-            email: '',
-            reviewCount: place.userRatingCount || 0,
-            avgRating: place.rating || 0,
-          });
-          existingNames.add(name.toLowerCase().trim());
-        }
-      } catch (err) {
-        console.error(`[auto-lead-gen] Places error for ${industry}/${city}:`, err.message);
-      }
-    }
-
-    if (!newLeads.length) {
-      console.log('[auto-lead-gen] No new leads found');
-      return { statusCode: 200, body: JSON.stringify({ added: 0 }) };
-    }
-
-    // Add leads to sheet + find emails + schedule
     function randomSendTime() {
       const d = new Date();
       if (d.getHours() >= 16) d.setDate(d.getDate() + 1);
@@ -204,44 +179,116 @@ exports.handler = async () => {
     }
     const now = new Date().toISOString();
     let scheduledCount = 0;
+    const backlogScheduled = [];
 
-    for (const lead of newLeads) {
+    // Process backlog first, up to MAX_LEADS
+    for (const lead of backlog) {
+      if (scheduledCount >= MAX_LEADS) break;
       try {
-        // Scrape email if website exists
-        if (lead.website) {
-          lead.email = (await scrapeEmail(lead.website)) || '';
-        }
-
-        await appendRow(TABS.LEADS, [
-          lead.id, lead.businessName, lead.industry, lead.city,
-          lead.email, lead.phone, lead.website,
-          '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
-          '', '', '', '', '', '', '', '',
-          lead.reviewCount || 0, lead.avgRating || 0,
+        const pitch = await generatePitch(lead);
+        const schedId = genId('sched');
+        await appendRow(TABS.SCHEDULED, [
+          schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
+          randomSendTime(), 'pending', now, '', lead.email,
         ]);
-
-        if (lead.email) {
-          const pitch = await generatePitch(lead);
-          const schedId = genId('sched');
-          await appendRow(TABS.SCHEDULED, [
-            schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-            randomSendTime(), 'pending', now, '', lead.email,
-          ]);
-          scheduledCount++;
-          console.log(`[auto-lead-gen] Scheduled email for ${lead.businessName} (${lead.email})`);
-        } else {
-          console.log(`[auto-lead-gen] Added ${lead.businessName} (no email found)`);
-        }
+        backlogScheduled.push(lead);
+        scheduledCount++;
+        console.log(`[auto-lead-gen] Backlog scheduled: ${lead.businessName} (${lead.email})`);
       } catch (err) {
-        console.error(`[auto-lead-gen] Failed for ${lead.businessName}:`, err.message);
+        console.error(`[auto-lead-gen] Backlog failed for ${lead.businessName}:`, err.message);
       }
     }
 
-    await sendSummaryEmail(newLeads, scheduledCount).catch(err =>
+    // Fill remaining slots with new leads from Google Places
+    const remainingSlots = MAX_LEADS - scheduledCount;
+    const newLeads = [];
+
+    if (remainingSlots > 0) {
+      const used = new Set();
+      const combos = [];
+      while (combos.length < COMBOS_PER_RUN) {
+        const industry = pick(INDUSTRIES);
+        const city = pick(CITIES);
+        const key = `${industry}|${city}`;
+        if (!used.has(key)) { used.add(key); combos.push({ industry, city }); }
+      }
+
+      for (const { industry, city } of combos) {
+        if (newLeads.length >= remainingSlots) break;
+        console.log(`[auto-lead-gen] Searching: ${industry} in ${city}`);
+        try {
+          const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': googleKey,
+              'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
+            },
+            body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
+          });
+          if (!placesRes.ok) continue;
+          const placesData = await placesRes.json();
+          for (const place of (placesData.places || [])) {
+            if (newLeads.length >= remainingSlots) break;
+            const name = place.displayName?.text || '';
+            if (!name || existingNames.has(name.toLowerCase().trim())) continue;
+            newLeads.push({
+              id: genId('L'),
+              businessName: name,
+              industry,
+              city,
+              phone: place.nationalPhoneNumber || '',
+              website: place.websiteUri || '',
+              email: '',
+              reviewCount: place.userRatingCount || 0,
+              avgRating: place.rating || 0,
+            });
+            existingNames.add(name.toLowerCase().trim());
+          }
+        } catch (err) {
+          console.error(`[auto-lead-gen] Places error for ${industry}/${city}:`, err.message);
+        }
+      }
+
+      for (const lead of newLeads) {
+        try {
+          if (lead.website) {
+            lead.email = (await scrapeEmail(lead.website)) || '';
+          }
+
+          await appendRow(TABS.LEADS, [
+            lead.id, lead.businessName, lead.industry, lead.city,
+            lead.email, lead.phone, lead.website,
+            '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
+            '', '', '', '', '', '', '', '',
+            lead.reviewCount || 0, lead.avgRating || 0,
+          ]);
+
+          if (lead.email) {
+            const pitch = await generatePitch(lead);
+            const schedId = genId('sched');
+            await appendRow(TABS.SCHEDULED, [
+              schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
+              randomSendTime(), 'pending', now, '', lead.email,
+            ]);
+            scheduledCount++;
+            console.log(`[auto-lead-gen] New lead scheduled: ${lead.businessName} (${lead.email})`);
+          } else {
+            console.log(`[auto-lead-gen] New lead added (no email): ${lead.businessName}`);
+          }
+        } catch (err) {
+          console.error(`[auto-lead-gen] Failed for ${lead.businessName}:`, err.message);
+        }
+      }
+    } else {
+      console.log(`[auto-lead-gen] Backlog filled all ${MAX_LEADS} slots — skipping new lead search`);
+    }
+
+    await sendSummaryEmail(backlogScheduled, newLeads, scheduledCount).catch(err =>
       console.error('[auto-lead-gen] Summary email failed:', err)
     );
 
-    return { statusCode: 200, body: JSON.stringify({ added: newLeads.length, scheduled: scheduledCount }) };
+    return { statusCode: 200, body: JSON.stringify({ backlog: backlogScheduled.length, added: newLeads.length, scheduled: scheduledCount }) };
   } catch (err) {
     console.error('[auto-lead-gen] Fatal:', err);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
