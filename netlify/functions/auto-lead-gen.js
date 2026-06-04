@@ -57,6 +57,10 @@ async function scrapeEmail(website) {
 
 async function generatePitch(lead) {
   const hasWebsite = !!lead.website;
+  const reviewLine = lead.reviewCount > 0
+    ? `- Google Reviews: ${lead.reviewCount} reviews, ${lead.avgRating}★ average`
+    : null;
+
   const prompt = `Write a short cold outreach email from Ollie at Aventra, a UK web design agency.
 
 Lead details:
@@ -64,12 +68,14 @@ Lead details:
 - Industry: ${lead.industry}
 - City: ${lead.city}
 - Website: ${hasWebsite ? lead.website : 'None — they have no website'}
+${reviewLine || ''}
 
 Rules:
 - Subject: curiosity-driven, under 10 words, no exclamation marks
 - Start with first name (infer from business name or omit) — no "Hi", no "Hey"
 - Body: 3-4 sentences MAX. Casual, personal.
 - ${hasWebsite ? 'Mention you spotted ideas to help them get more local work' : 'Lead with missing enquiries from people searching online'}
+${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge their strong local reputation and connect it to why a website would help even more people find them` : ''}
 - End with a low-pressure ask (free mockup)
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
@@ -156,7 +162,7 @@ exports.handler = async () => {
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': googleKey,
-            'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri',
+            'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
           },
           body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
         });
@@ -174,6 +180,8 @@ exports.handler = async () => {
             phone: place.nationalPhoneNumber || '',
             website: place.websiteUri || '',
             email: '',
+            reviewCount: place.userRatingCount || 0,
+            avgRating: place.rating || 0,
           });
           existingNames.add(name.toLowerCase().trim());
         }
@@ -209,6 +217,7 @@ exports.handler = async () => {
           lead.email, lead.phone, lead.website,
           '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
           '', '', '', '', '', 0, '', '', '',
+          lead.reviewCount || 0, lead.avgRating || 0,
         ]);
 
         if (lead.email) {

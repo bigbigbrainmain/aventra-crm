@@ -146,7 +146,12 @@ function LeadCard({ lead, emailStage, onClick, onToggleFavourite }) {
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-end gap-2">
+      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
+        {lead.reviewCount > 0 ? (
+          <span className="text-xs text-slate-400">
+            ★ {lead.avgRating} <span className="text-slate-300">·</span> {lead.reviewCount} reviews
+          </span>
+        ) : <span />}
         <EmailStageBadge stage={emailStage} count={lead.outreachCount || 0} />
       </div>
     </div>

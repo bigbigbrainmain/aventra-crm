@@ -23,7 +23,7 @@ exports.handler = async (event) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri',
+        'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
       },
       body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
     });
@@ -49,14 +49,17 @@ exports.handler = async (event) => {
       const id = genId('L');
       const website = place.websiteUri || '';
       const phone = place.nationalPhoneNumber || '';
+      const reviewCount = place.userRatingCount || 0;
+      const avgRating = place.rating || 0;
 
       await appendRow(TABS.LEADS, [
         id, name, industry, city, '', phone, website,
         '', '', 'New', '', '', '', '', 'No', 'FALSE',
         '', '', '', '', '', 0, '', '', '',
+        reviewCount, avgRating,
       ]);
 
-      addedLeads.push({ id, businessName: name, industry, city, phone, website, email: '', status: 'New', priority: '' });
+      addedLeads.push({ id, businessName: name, industry, city, phone, website, email: '', status: 'New', priority: '', reviewCount, avgRating });
     }
 
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ leads: addedLeads, count: addedLeads.length }) };

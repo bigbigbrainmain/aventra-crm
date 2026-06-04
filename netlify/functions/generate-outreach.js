@@ -28,6 +28,7 @@ async function generatePitch(lead) {
     `- Email: ${lead.email || 'unknown'}`,
     `- Phone: ${lead.phone || 'none on file'}`,
     `- Website: ${hasWebsite ? lead.website : 'None — they have no website'}`,
+    lead.reviewCount > 0 ? `- Google Reviews: ${lead.reviewCount} reviews, ${lead.avgRating}★ average` : null,
     `- Priority: ${lead.priority || 'not set'}`,
     `- Status: ${lead.status || 'New'}`,
     `- Date pitched: ${lead.datePitched || 'not yet'}`,
@@ -65,6 +66,7 @@ Rules:
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
 - If they have no website: lead with that pain point (they're missing enquiries from people searching online)
+- If they have no website AND lots of Google reviews (20+): acknowledge their strong reputation first, then connect to why a website would help even more people find them
 - If they have a website: mention you spotted a couple of ideas to help them get more local work
 - If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
 - End with a tiny low-pressure ask (free mockup, or happy to send ideas)
