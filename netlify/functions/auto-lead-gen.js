@@ -25,7 +25,7 @@ const CITIES = [
   'Cheltenham', 'Northampton', 'Ipswich', 'Norwich', 'Cambridge',
 ];
 
-const MAX_LEADS = 10;
+const MAX_LEADS = 20;
 const COMBOS_PER_RUN = 4;
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
