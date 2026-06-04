@@ -20,7 +20,7 @@ async function scrapeEmail(rawWebsite) {
     try {
       const res = await fetch(base + path, {
         headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(7000),
+        signal: AbortSignal.timeout(4000),
       });
       if (!res.ok) continue;
       const email = extractEmail(await res.text());
@@ -33,7 +33,7 @@ async function scrapeEmail(rawWebsite) {
 exports.handler = async (event) => {
   try {
     const offset = parseInt(event.queryStringParameters?.offset || '0');
-    const limit = parseInt(event.queryStringParameters?.limit || '20');
+    const limit = parseInt(event.queryStringParameters?.limit || '5');
 
     const rows = await getRange(TABS.LEADS, 'A2:X');
     const all = rows
