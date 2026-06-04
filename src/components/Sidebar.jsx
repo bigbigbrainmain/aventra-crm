@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal, PenLine, Search } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, FileText, Globe, Settings, PlusCircle, Mail, BookOpen, Pin, Package, SendHorizontal, PenLine, Search, Flame } from 'lucide-react';
 import { api } from '../utils/api';
 import SignatureModal from './SignatureModal';
 
@@ -8,6 +8,7 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard',      Icon: LayoutDashboard },
   { id: 'leads',     label: 'All Leads',      Icon: Users            },
   { id: 'outreach',  label: 'Outreach',       Icon: SendHorizontal   },
+  { id: 'prime-leads', label: 'Prime Leads',   Icon: Flame            },
   { id: 'lead-gen',  label: 'Lead Gen',       Icon: Search           },
   { id: 'customers', label: 'Live Customers', Icon: Globe            },
   { id: 'addons',    label: 'Add-ons',        Icon: Package          },
@@ -16,7 +17,7 @@ const NAV = [
   { id: 'documents', label: 'Internal Docs',  Icon: BookOpen         },
 ];
 
-export default function Sidebar({ analytics, onSetup, onEnterLead }) {
+export default function Sidebar({ analytics, onSetup, onEnterLead, primeCount = 0 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const overdueCount = analytics?.overdueTasksCount || 0;
@@ -102,6 +103,11 @@ export default function Sidebar({ analytics, onSetup, onEnterLead }) {
                   ${showCls('inline')}
                   ${overdueCount > 0 ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'}`}>
                   {overdueCount > 0 ? overdueCount : todayCount}
+                </span>
+              )}
+              {id === 'prime-leads' && primeCount > 0 && (
+                <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-semibold bg-emerald-500 text-white ${showCls('inline')}`}>
+                  {primeCount}
                 </span>
               )}
             </button>

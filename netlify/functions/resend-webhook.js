@@ -69,13 +69,9 @@ async function handleOpened(data) {
 
   const now = new Date().toISOString();
 
-  const lowerPriorities = ['🟠 Priority 2', '🟡 Priority 3', '🟢 Skip', ''];
-  const newPriority = lowerPriorities.includes(lead.priority) ? '🔴 Priority 1' : lead.priority;
-
   await updateRange(TABS.LEADS, `V${rowNum}`, [now]);
-  await updateRange(TABS.LEADS, `H${rowNum}`, [newPriority]);
 
-  console.log(`[resend-webhook] Lead ${leadId} opened email — priority set to ${newPriority}`);
+  console.log(`[resend-webhook] Lead ${leadId} opened email`);
 
   await sendOpenNotification(lead, leadId).catch(err =>
     console.error('[resend-webhook] Notification email failed:', err)

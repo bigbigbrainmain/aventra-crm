@@ -10,6 +10,7 @@ import DocumentsView from './components/DocumentsView';
 import AddonsView from './components/AddonsView';
 import OutreachView from './components/OutreachView';
 import LeadGenView from './components/LeadGenView';
+import PrimeLeadsView from './components/PrimeLeadsView';
 import LeadDetail from './components/LeadDetail';
 import EnterLeadModal from './components/EnterLeadModal';
 import LoginScreen from './components/LoginScreen';
@@ -108,6 +109,7 @@ function CRMApp() {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
         analytics={analytics}
+        primeCount={leads.filter(l => l.status === 'Replied' || l.emailOpenedAt).length}
         onEnterLead={() => setShowEnterLead(true)}
         onSetup={async () => {
           try {
@@ -189,6 +191,12 @@ function CRMApp() {
                 leads={leads}
                 onSelectLead={(lead) => selectLead(lead, 'outreach')}
                 onRefresh={loadData}
+              />
+            } />
+            <Route path="/prime-leads" element={
+              <PrimeLeadsView
+                leads={leads}
+                onSelectLead={(lead) => selectLead(lead, 'prime-leads')}
               />
             } />
             <Route path="/lead-gen" element={

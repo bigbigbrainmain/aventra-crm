@@ -2,6 +2,7 @@ export const STATUSES = [
   'New',
   'Working',
   'HOT',
+  'Replied',
   'Proposal Requested',
   'Booked',
   'Lost',
@@ -21,6 +22,7 @@ export const STATUS_CONFIG = {
   'Qualified Out':         { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
   'Closed Won':            { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
   'NRTB':                  { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
+  'Replied':               { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
   'Incorrect Product Fit': { bg: 'bg-rose-100',   text: 'text-rose-700',  dot: 'bg-rose-500'   },
 };
 
