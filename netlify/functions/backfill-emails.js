@@ -30,18 +30,24 @@ async function scrapeEmail(rawWebsite) {
   return null;
 }
 
-exports.handler = async () => {
+exports.handler = async (event) => {
   try {
+    const offset = parseInt(event.queryStringParameters?.offset || '0');
+    const limit = parseInt(event.queryStringParameters?.limit || '20');
+
     const rows = await getRange(TABS.LEADS, 'A2:X');
-    const leads = rows
+    const all = rows
       .map((row, i) => ({ lead: rowToLead(row, i + 2), rowNum: i + 2 }))
       .filter(({ lead }) => lead.id && lead.website && !lead.email);
 
-    console.log(`[backfill-emails] ${leads.length} leads need emails`);
+    const batch = all.slice(offset, offset + limit);
+    const remaining = Math.max(0, all.length - offset - batch.length);
+
+    console.log(`[backfill-emails] batch ${offset}-${offset + batch.length} of ${all.length}`);
 
     const results = { found: 0, notFound: 0, errors: 0 };
 
-    for (const { lead, rowNum } of leads) {
+    for (const { lead, rowNum } of batch) {
       try {
         const email = await scrapeEmail(lead.website);
         if (email) {
@@ -61,7 +67,7 @@ exports.handler = async () => {
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ total: leads.length, ...results }),
+      body: JSON.stringify({ processed: batch.length, remaining, nextOffset: offset + batch.length, ...results }),
     };
   } catch (err) {
     console.error('[backfill-emails] Fatal:', err);
