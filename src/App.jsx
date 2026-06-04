@@ -197,6 +197,7 @@ function CRMApp() {
               <PrimeLeadsView
                 leads={leads}
                 onSelectLead={(lead) => selectLead(lead, 'prime-leads')}
+                onRefresh={loadData}
               />
             } />
             <Route path="/lead-gen" element={

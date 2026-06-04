@@ -1,7 +1,8 @@
 import { Phone, Mail, ExternalLink, MessageSquare, Eye } from 'lucide-react';
 import { timeAgo } from '../utils/constants';
+import { api } from '../utils/api';
 
-function PrimeCard({ lead, onSelect }) {
+function PrimeCard({ lead, onSelect, onMarkReplied }) {
   const replied = lead.status === 'Replied';
   return (
     <div
@@ -59,24 +60,34 @@ function PrimeCard({ lead, onSelect }) {
         )}
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
-        <span className="text-xs text-slate-400">
-          {lead.outreachCount || 0} email{lead.outreachCount !== 1 ? 's' : ''} sent
-        </span>
+      <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
         <span className="text-xs text-slate-400">
           {replied
             ? 'replied ' + timeAgo(lead.lastOutreachAt)
             : 'opened ' + timeAgo(lead.emailOpenedAt)
           }
         </span>
+        {!replied && (
+          <button
+            onClick={e => { e.stopPropagation(); onMarkReplied(lead.id); }}
+            className="text-xs font-medium px-2.5 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
+          >
+            Mark replied
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export default function PrimeLeadsView({ leads = [], onSelectLead }) {
+export default function PrimeLeadsView({ leads = [], onSelectLead, onRefresh }) {
   const replied = leads.filter(l => l.status === 'Replied');
   const opened  = leads.filter(l => l.emailOpenedAt && l.status !== 'Replied');
+
+  async function handleMarkReplied(leadId) {
+    await api.updateLead(leadId, { status: 'Replied' });
+    onRefresh();
+  }
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -100,7 +111,7 @@ export default function PrimeLeadsView({ leads = [], onSelectLead }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {replied.map(lead => (
-              <PrimeCard key={lead.id} lead={lead} onSelect={onSelectLead} />
+              <PrimeCard key={lead.id} lead={lead} onSelect={onSelectLead} onMarkReplied={handleMarkReplied} />
             ))}
           </div>
         </section>
@@ -115,7 +126,7 @@ export default function PrimeLeadsView({ leads = [], onSelectLead }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {opened.map(lead => (
-              <PrimeCard key={lead.id} lead={lead} onSelect={onSelectLead} />
+              <PrimeCard key={lead.id} lead={lead} onSelect={onSelectLead} onMarkReplied={handleMarkReplied} />
             ))}
           </div>
         </section>
