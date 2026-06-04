@@ -1,4 +1,4 @@
-const { TABS, getRange, appendRow, genId, ensureTab } = require('./_sheets');
+const { TABS, getRange, appendRow, updateCell, genId, ensureTab } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
@@ -207,7 +207,7 @@ exports.handler = async () => {
         await appendRow(TABS.LEADS, [
           lead.id, lead.businessName, lead.industry, lead.city,
           lead.email, lead.phone, lead.website,
-          '', '', 'New', '', '', '', '', 'No', 'FALSE',
+          '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
           '', '', '', '', '', 0, '', '', '',
         ]);
 

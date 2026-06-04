@@ -1,4 +1,4 @@
-const { TABS, rowToLead, getRange, updateRow } = require('./_sheets');
+const { TABS, rowToLead, getRange, updateRow, updateCell } = require('./_sheets');
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -38,7 +38,7 @@ exports.handler = async (event) => {
     const rows = await getRange(TABS.LEADS, 'A2:X');
     const all = rows
       .map((row, i) => ({ lead: rowToLead(row, i + 2), rowNum: i + 2 }))
-      .filter(({ lead }) => lead.id && lead.website && !lead.email);
+      .filter(({ lead }) => lead.id && lead.website && !lead.email && lead.priorityReason !== 'email:not-found');
 
     const batch = all.slice(offset, offset + limit);
     const remaining = Math.max(0, all.length - offset - batch.length);
@@ -55,6 +55,7 @@ exports.handler = async (event) => {
           results.found++;
           console.log(`[backfill-emails] ✓ ${lead.businessName}: ${email}`);
         } else {
+          await updateCell(TABS.LEADS, `I${rowNum}`, 'email:not-found');
           results.notFound++;
           console.log(`[backfill-emails] ✗ ${lead.businessName}: not found`);
         }
