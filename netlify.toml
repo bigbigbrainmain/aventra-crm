@@ -4,10 +4,10 @@
   functions = "netlify/functions"
 
 [functions."auto-lead-gen"]
-  schedule = "0 7 * * 1-5"
+  schedule = "0 7,12 * * 1-5"
 
 [functions."auto-followup"]
-  schedule = "0 8 * * 1-5"
+  schedule = "0 8,13 * * 1-5"
 
 [functions."scheduled-send"]
   schedule = "0 * * * *"

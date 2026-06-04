@@ -63,7 +63,7 @@ exports.handler = async () => {
           body: JSON.stringify({
             from: `${FROM_NAME} <${FROM}>`,
             to: [item.leadEmail],
-            reply_to: [`reply+${item.leadId}@aventrasites.online`],
+            reply_to: ['ollie@aventrasites.online', 'joe@aventrasites.online'],
             subject: item.subject,
             html,
             tags: [{ name: 'leadId', value: item.leadId }],

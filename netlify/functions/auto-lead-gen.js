@@ -25,8 +25,8 @@ const CITIES = [
   'Cheltenham', 'Northampton', 'Ipswich', 'Norwich', 'Cambridge',
 ];
 
-const MAX_LEADS = 8;
-const COMBOS_PER_RUN = 3;
+const MAX_LEADS = 10;
+const COMBOS_PER_RUN = 4;
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -188,7 +188,12 @@ exports.handler = async () => {
     }
 
     // Add leads to sheet + find emails + schedule
-    const sendAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    function randomSendTime() {
+      const d = new Date();
+      if (d.getHours() >= 16) d.setDate(d.getDate() + 1);
+      d.setHours(9 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 60), 0, 0);
+      return d.toISOString();
+    }
     const now = new Date().toISOString();
     let scheduledCount = 0;
 
@@ -211,7 +216,7 @@ exports.handler = async () => {
           const schedId = genId('sched');
           await appendRow(TABS.SCHEDULED, [
             schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-            sendAt, 'pending', now, '', lead.email,
+            randomSendTime(), 'pending', now, '', lead.email,
           ]);
           scheduledCount++;
           console.log(`[auto-lead-gen] Scheduled email for ${lead.businessName} (${lead.email})`);

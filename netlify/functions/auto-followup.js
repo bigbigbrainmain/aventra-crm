@@ -2,7 +2,7 @@ const { TABS, rowToLead, getRange, appendRow, ensureTab, genId } = require('./_s
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
-const MAX_FOLLOWUPS = 15;
+const MAX_FOLLOWUPS = 10;
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
@@ -148,11 +148,13 @@ exports.handler = async () => {
       return { statusCode: 200, body: JSON.stringify({ scheduled: 0 }) };
     }
 
-    // Schedule send for tomorrow 9am
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    const sendAt = tomorrow.toISOString();
+    // Spread sends randomly between 9am–5pm tomorrow
+    function randomSendTime() {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 60), 0, 0);
+      return d.toISOString();
+    }
     const now = new Date().toISOString();
 
     const warmSucceeded = [];
@@ -167,7 +169,7 @@ exports.handler = async () => {
         const schedId = genId('sched');
         await appendRow(TABS.SCHEDULED, [
           schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-          sendAt, 'pending', now, '', lead.email,
+          randomSendTime(), 'pending', now, '', lead.email,
         ]);
         warmSucceeded.push(lead.businessName);
         total++;
@@ -185,7 +187,7 @@ exports.handler = async () => {
         const schedId = genId('sched');
         await appendRow(TABS.SCHEDULED, [
           schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-          sendAt, 'pending', now, '', lead.email,
+          randomSendTime(), 'pending', now, '', lead.email,
         ]);
         coldSucceeded.push(lead.businessName);
         total++;
