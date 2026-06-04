@@ -18,6 +18,9 @@
 [functions."backfill-emails"]
   timeout = 26
 
+[functions."backfill-reviews"]
+  timeout = 26
+
 [functions."lead-gen-emails"]
   timeout = 26
 
