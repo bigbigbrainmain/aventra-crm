@@ -216,7 +216,7 @@ exports.handler = async () => {
           lead.id, lead.businessName, lead.industry, lead.city,
           lead.email, lead.phone, lead.website,
           '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
-          '', '', '', '', '', 0, '', '', '',
+          '', '', '', '', '', '', '', '',
           lead.reviewCount || 0, lead.avgRating || 0,
         ]);
 
