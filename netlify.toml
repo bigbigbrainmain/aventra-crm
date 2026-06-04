@@ -3,6 +3,9 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[functions."daily-digest"]
+  schedule = "0 18 * * 1-5"
+
 [functions."auto-lead-gen"]
   schedule = "0 7,12 * * 1-5"
 
