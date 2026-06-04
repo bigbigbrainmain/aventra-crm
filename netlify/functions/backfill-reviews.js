@@ -5,32 +5,6 @@ const HEADERS = {
   'Access-Control-Allow-Origin': '*',
 };
 
-async function fetchReviews(businessName, city, apiKey) {
-  const query = city ? `${businessName} ${city}` : businessName;
-  try {
-    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.displayName,places.rating,places.userRatingCount',
-      },
-      body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const place = data.places?.[0];
-    if (!place) return null;
-    return {
-      reviewCount: place.userRatingCount || 0,
-      avgRating: place.rating || 0,
-    };
-  } catch {
-    return null;
-  }
-}
-
 exports.handler = async (event) => {
   try {
     const apiKey = process.env.GOOGLE_API_KEY;
@@ -47,35 +21,57 @@ exports.handler = async (event) => {
     const batch = all.slice(offset, offset + limit);
     const remaining = Math.max(0, all.length - offset - batch.length);
 
-    console.log(`[backfill-reviews] batch ${offset}–${offset + batch.length} of ${all.length}`);
-
-    const results = { found: 0, notFound: 0, errors: 0 };
+    let found = 0, notFound = 0, errors = 0;
+    let lastError = null;
 
     for (const { lead, rowNum } of batch) {
+      const query = [lead.businessName, lead.city].filter(Boolean).join(' ');
+      let data = null;
+
       try {
-        const data = await fetchReviews(lead.businessName, lead.city, apiKey);
-        if (data && data.reviewCount > 0) {
+        const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'places.rating,places.userRatingCount',
+          },
+          body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const place = json.places && json.places[0];
+          if (place && place.userRatingCount) {
+            data = { reviewCount: place.userRatingCount, avgRating: place.rating || 0 };
+          }
+        } else {
+          const errText = await res.text();
+          lastError = `HTTP ${res.status}: ${errText.slice(0, 200)}`;
+        }
+      } catch (fetchErr) {
+        lastError = `fetch error: ${fetchErr.message}`;
+      }
+
+      try {
+        if (data) {
           await updateCell(TABS.LEADS, `Y${rowNum}`, data.reviewCount);
           await updateCell(TABS.LEADS, `Z${rowNum}`, data.avgRating);
-          results.found++;
-          console.log(`[backfill-reviews] ✓ ${lead.businessName}: ${data.reviewCount} reviews, ${data.avgRating}★`);
+          found++;
         } else {
-          results.notFound++;
-          console.log(`[backfill-reviews] ✗ ${lead.businessName}: no data`);
+          notFound++;
         }
-      } catch (err) {
-        results.errors++;
-        console.error(`[backfill-reviews] Error for ${lead.businessName}:`, err.message);
+      } catch (writeErr) {
+        errors++;
+        lastError = `write error: ${writeErr.message}`;
       }
     }
 
     return {
       statusCode: 200,
       headers: HEADERS,
-      body: JSON.stringify({ processed: batch.length, remaining, nextOffset: offset + batch.length, ...results }),
+      body: JSON.stringify({ processed: batch.length, remaining, nextOffset: offset + batch.length, found, notFound, errors, lastError }),
     };
   } catch (err) {
-    console.error('[backfill-reviews] Fatal:', err);
     return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
   }
 };

@@ -49,9 +49,9 @@ while true; do
   total_errors=$((total_errors + errors))
   total_processed=$((offset + processed))
 
-  [ "$found" -gt 0 ] && found_str="✅ $found with reviews" || found_str="   $found with reviews"
+  [ "$found" -gt 0 ] && found_str="✅ $found found" || found_str="   $found found"
 
-  echo "  Batch $batch_num  |  leads $((offset+1))–$total_processed  |  $found_str  |  ❌ $not_found no data  |  $remaining remaining"
+  echo "  Batch $batch_num  |  leads $((offset+1))–$total_processed  |  $found_str  |  ❌ $not_found no data  |  ⚠️  $errors errors  |  $remaining remaining"
 
   if [ "$remaining" = "0" ] || [ -z "$remaining" ] || [ "$processed" = "0" ]; then
     break
