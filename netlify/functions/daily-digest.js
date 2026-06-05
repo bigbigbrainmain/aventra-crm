@@ -4,11 +4,7 @@ const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 
 function isToday(iso) {
   if (!iso) return false;
-  const d = new Date(iso);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
+  return Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000;
 }
 
 exports.handler = async () => {
