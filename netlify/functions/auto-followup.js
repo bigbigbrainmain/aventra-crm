@@ -1,8 +1,8 @@
-const { TABS, rowToLead, getRange, appendRow, ensureTab, genId } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
-const MAX_FOLLOWUPS = 10;
+const MAX_FOLLOWUPS = 5;
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
@@ -116,8 +116,20 @@ exports.handler = async () => {
   try {
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    const rows = await getRange(TABS.LEADS, 'A2:X');
-    const leads = rows.map((row, i) => rowToLead(row, i + 2)).filter(l => l.id && l.email);
+    const [leadRows, schedRows] = await Promise.all([
+      getRange(TABS.LEADS, 'A2:X'),
+      getRange(TABS.SCHEDULED, 'A2:J'),
+    ]);
+
+    // IDs of leads that already have a pending scheduled email — skip these
+    const alreadyPending = new Set(
+      schedRows
+        .map(r => rowToScheduled(r, 0))
+        .filter(s => s.status === 'pending')
+        .map(s => s.leadId)
+    );
+
+    const leads = leadRows.map((row, i) => rowToLead(row, i + 2)).filter(l => l.id && l.email);
 
     const eligible = leads.filter(l =>
       !DEAD_STATUSES.has(l.status) &&
@@ -125,7 +137,8 @@ exports.handler = async () => {
       l.outreachCount >= 1 &&
       l.outreachCount < MAX_OUTREACH_COUNT &&
       l.industry &&
-      l.city
+      l.city &&
+      !alreadyPending.has(l.id)
     );
 
     // Pool A: opened but no reply
