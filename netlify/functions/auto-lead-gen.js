@@ -1,4 +1,4 @@
-const { TABS, rowToLead, getRange, appendRow, genId, ensureTab } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
@@ -153,11 +153,22 @@ exports.handler = async () => {
 
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    // Read full lead data — used for both dedup and backlog detection
-    const existingRows = await getRange(TABS.LEADS, 'A2:Z');
+    // Read lead data and scheduled queue together
+    const [existingRows, schedRows] = await Promise.all([
+      getRange(TABS.LEADS, 'A2:Z'),
+      getRange(TABS.SCHEDULED, 'A2:J'),
+    ]);
     const existingNames = new Set(existingRows.map(r => String(r[1] || '').toLowerCase().trim()));
 
-    // Backlog: leads with email found, never contacted, not dead/opted-out
+    // Skip leads that already have a pending email queued
+    const alreadyPending = new Set(
+      schedRows
+        .map(r => rowToScheduled(r, 0))
+        .filter(s => s.status === 'pending')
+        .map(s => s.leadId)
+    );
+
+    // Backlog: leads with email found, never contacted, not dead/opted-out, not already queued
     const backlog = existingRows
       .map((row, i) => rowToLead(row, i + 2))
       .filter(l =>
@@ -166,7 +177,8 @@ exports.handler = async () => {
         l.outreachCount === 0 &&
         !DEAD_STATUSES.has(l.status) &&
         l.outreachOptedOut !== 'Yes' &&
-        !l.priorityReason.includes('email:not-found')
+        !l.priorityReason.includes('email:not-found') &&
+        !alreadyPending.has(l.id)
       );
 
     console.log(`[auto-lead-gen] Backlog: ${backlog.length} uncontacted leads with emails`);
