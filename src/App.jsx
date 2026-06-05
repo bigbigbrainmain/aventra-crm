@@ -109,7 +109,7 @@ function CRMApp() {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
         analytics={analytics}
-        primeCount={leads.filter(l => l.status === 'Replied' || l.emailOpenedAt).length}
+        primeCount={leads.filter(l => l.status === 'Replied' || (l.emailOpenedAt && l.emailOpenedAt.length > 10 && !isNaN(new Date(l.emailOpenedAt)))).length}
         onEnterLead={() => setShowEnterLead(true)}
         onSetup={async () => {
           try {

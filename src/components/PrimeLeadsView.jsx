@@ -81,8 +81,9 @@ function PrimeCard({ lead, onSelect, onMarkReplied }) {
 }
 
 export default function PrimeLeadsView({ leads = [], onSelectLead, onRefresh }) {
+  function validDate(val) { return val && val.length > 10 && !isNaN(new Date(val)); }
   const replied = leads.filter(l => l.status === 'Replied');
-  const opened  = leads.filter(l => l.emailOpenedAt && l.status !== 'Replied');
+  const opened  = leads.filter(l => validDate(l.emailOpenedAt) && l.status !== 'Replied');
 
   async function handleMarkReplied(leadId) {
     await api.updateLead(leadId, { status: 'Replied' });
