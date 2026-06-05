@@ -5,6 +5,7 @@ import {
   Legend, ResponsiveContainer, Cell, ComposedChart, Line,
 } from 'recharts';
 import { getStatusStyle, isDueToday, isOverdue } from '../utils/constants';
+import OutreachFlow from './OutreachFlow';
 
 const STATUS_COLORS = {
   'New':                '#94a3b8',
@@ -512,6 +513,9 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Outreach pipeline flow */}
+      <OutreachFlow leads={leads} />
 
       {/* Tasks + Recent Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

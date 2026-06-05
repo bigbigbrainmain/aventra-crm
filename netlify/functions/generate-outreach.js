@@ -65,11 +65,17 @@ Rules:
 - Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
-- If they have no website: lead with that pain point (they're missing enquiries from people searching online)
-- If they have no website AND lots of Google reviews (20+): acknowledge their strong reputation first, then connect to why a website would help even more people find them
-- If they have a website: mention you spotted a couple of ideas to help them get more local work
+- Sentence 1: one SPECIFIC observation about their situation — e.g. their site has a problem, they have no site and are missing searches, or they have great reviews but no web presence. Be concrete, not generic filler.
+- Sentence 2: connect that observation to a real consequence (lost enquiries, competitors winning the search)
+- If they have no website: lead with missing enquiries from people searching online
+- If they have no website AND 20+ Google reviews: acknowledge their strong reputation first, then connect to why a website would reach even more people
+- If they have a website: reference something specific you spotted that could help them get more local work
 - If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
-- End with a tiny low-pressure ask (free mockup, or happy to send ideas)
+- End with ONE of these CTAs — vary them, never use the same one twice in a row:
+  • "Happy to send over a free mockup if you'd like to see what it could look like?"
+  • "Would it be worth me putting together a few ideas and sending them over?"
+  • "Happy to send over some ideas — no strings attached."
+- NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school", "for your plumbing business")
 - Close with "Best regards," on its own line before the sign-off
 - Do NOT include any sign-off or signature after "Best regards," — that is added separately
 - NO unsubscribe links, NO marketing speak, NO exclamation marks

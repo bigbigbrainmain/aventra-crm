@@ -75,9 +75,15 @@ Rules:
 - Subject: curiosity-driven, under 10 words, no exclamation marks
 - Start with first name (infer from business name or omit) — no "Hi", no "Hey"
 - Body: 3-4 sentences MAX. Casual, personal.
-- ${hasWebsite ? 'Mention you spotted ideas to help them get more local work' : 'Lead with missing enquiries from people searching online'}
-${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge their strong local reputation and connect it to why a website would help even more people find them` : ''}
-- End with a low-pressure ask (free mockup)
+- Sentence 1: one SPECIFIC observation — site has a problem, no site missing searches, or great reviews but no web presence. Concrete, not generic filler.
+- Sentence 2: connect that to a real consequence (lost enquiries, competitors winning the search)
+- ${hasWebsite ? 'Angle: reference something specific you spotted that could help them get more local work' : 'Angle: they are missing enquiries from people searching online right now'}
+${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge their strong local reputation first, then connect to why a website would help even more people find them` : ''}
+- End with ONE of these CTAs — vary them each time:
+  • "Happy to send over a free mockup if you'd like to see what it could look like?"
+  • "Would it be worth me putting together a few ideas and sending them over?"
+  • "Happy to send over some ideas — no strings attached."
+- NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school")
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks, NO marketing speak
