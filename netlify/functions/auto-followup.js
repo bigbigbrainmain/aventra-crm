@@ -2,7 +2,7 @@ const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId }
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
-const MAX_FOLLOWUPS = 5;
+const MAX_FOLLOWUPS = parseInt(process.env.FOLLOWUP_PER_RUN || '5');
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
