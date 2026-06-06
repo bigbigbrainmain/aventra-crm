@@ -49,7 +49,7 @@ function extractPhone(html) {
   return m ? m[1].trim() : null;
 }
 
-async function fetchHtml(url, timeoutMs = 6000) {
+async function fetchHtml(url, timeoutMs = 4000) {
   try {
     const res = await fetch(url, {
       headers: {
