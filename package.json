@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "d3-sankey": "^0.12.3",
     "firebase": "^12.12.0",
     "googleapis": "^140.0.0",
     "lucide-react": "^0.344.0",
