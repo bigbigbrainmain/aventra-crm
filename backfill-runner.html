@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aventra — Email Enrichment Backfill</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f3f4f6; display: flex; justify-content: center; padding: 40px 16px; }
+    .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; max-width: 620px; width: 100%; overflow: hidden; }
+    .header { background: #2563eb; padding: 24px 32px; }
+    .header h1 { color: white; font-size: 20px; margin-bottom: 4px; }
+    .header p { color: #bfdbfe; font-size: 14px; }
+    .body { padding: 32px; }
+
+    .stat-row { display: flex; gap: 12px; margin-bottom: 24px; }
+    .stat { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; }
+    .stat .val { font-size: 28px; font-weight: 700; color: #111827; }
+    .stat .lbl { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .stat.green .val { color: #16a34a; }
+    .stat.blue .val { color: #2563eb; }
+    .stat.amber .val { color: #d97706; }
+
+    .phase { margin-bottom: 20px; }
+    .phase-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+    .badge.pending  { background: #f3f4f6; color: #6b7280; }
+    .badge.running  { background: #dbeafe; color: #1d4ed8; }
+    .badge.done     { background: #dcfce7; color: #15803d; }
+    .badge.error    { background: #fee2e2; color: #dc2626; }
+    .phase-title { font-weight: 600; font-size: 15px; color: #111827; }
+    .phase-sub { font-size: 13px; color: #6b7280; }
+
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+    .progress-fill { height: 100%; background: #2563eb; border-radius: 3px; transition: width 0.4s; }
+
+    .log { background: #111827; color: #d1fae5; font-family: monospace; font-size: 12px; border-radius: 8px; padding: 16px; max-height: 200px; overflow-y: auto; margin-top: 16px; }
+    .log p { margin-bottom: 4px; opacity: 0.8; }
+    .log p:last-child { opacity: 1; }
+    .log .err { color: #fca5a5; }
+
+    button { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 24px; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    .cost-note { font-size: 12px; color: #6b7280; text-align: center; margin-top: 12px; }
+    .done-banner { background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; margin-top: 20px; color: #15803d; font-weight: 600; display: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Email Enrichment Backfill</h1>
+    <p>Runs all existing <code>email:not-found</code> leads through directories then Claude</p>
+  </div>
+  <div class="body">
+
+    <div class="stat-row">
+      <div class="stat green">
+        <div class="val" id="statFound">—</div>
+        <div class="lbl">Emails found</div>
+      </div>
+      <div class="stat">
+        <div class="val" id="statNotFound">—</div>
+        <div class="lbl">Not found</div>
+      </div>
+      <div class="stat blue">
+        <div class="val" id="statRemaining">—</div>
+        <div class="lbl">Remaining</div>
+      </div>
+      <div class="stat amber">
+        <div class="val" id="statCost">$0.00</div>
+        <div class="lbl">Claude cost</div>
+      </div>
+    </div>
+
+    <div class="phase" id="phaseEstimate">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeEstimate">Pending</span>
+        <span class="phase-title">Estimate</span>
+      </div>
+      <div class="phase-sub" id="subEstimate">Counting leads and projecting cost...</div>
+    </div>
+
+    <div class="phase" id="phaseDirs">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeDirs">Pending</span>
+        <span class="phase-title">Pass 1 — UK Directories</span>
+      </div>
+      <div class="phase-sub" id="subDirs">192.com · Hotfrog · Cylex · FreeIndex · Thomson Local · Local.co.uk</div>
+      <div class="progress-bar"><div class="progress-fill" id="progDirs" style="width:0%"></div></div>
+    </div>
+
+    <div class="phase" id="phaseClaude">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeClaude">Pending</span>
+        <span class="phase-title">Pass 2 — Claude subagent</span>
+      </div>
+      <div class="phase-sub" id="subClaude">Autonomous web browsing for remaining leads</div>
+      <div class="progress-bar"><div class="progress-fill" id="progClaude" style="width:0%"></div></div>
+    </div>
+
+    <div class="log" id="log"><p>Press Start to begin.</p></div>
+
+    <div class="done-banner" id="doneBanner">All done! Check the leads sheet for newly found emails.</div>
+
+    <button id="btn" onclick="startBackfill()">Start Backfill</button>
+    <div class="cost-note">Directories are free. Claude cost shown above updates in real time.</div>
+
+  </div>
+</div>
+
+<script>
+  const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
+  const DIRS_LIMIT = 12;
+  const CLAUDE_LIMIT = 4;
+
+  let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
+  let dirsTotal = 0, claudeTotal = 0;
+  let aborted = false;
+
+  function log(msg, cls = '') {
+    const el = document.getElementById('log');
+    const p = document.createElement('p');
+    if (cls) p.className = cls;
+    p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(p);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setBadge(id, state) {
+    const el = document.getElementById(id);
+    el.className = 'badge ' + state;
+    el.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+  }
+
+  function updateStats() {
+    document.getElementById('statFound').textContent = totalFound;
+    document.getElementById('statNotFound').textContent = totalNotFound;
+    document.getElementById('statCost').textContent = '$' + totalCostUsd.toFixed(4);
+  }
+
+  function setRemaining(n) {
+    document.getElementById('statRemaining').textContent = n;
+  }
+
+  async function callEndpoint(params) {
+    const url = BASE + '?' + new URLSearchParams(params).toString();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function startBackfill() {
+    document.getElementById('btn').disabled = true;
+    document.getElementById('log').innerHTML = '';
+    totalFound = 0; totalNotFound = 0; totalErrors = 0; totalCostUsd = 0;
+
+    // ── Estimate ─────────────────────────────────────────────────────────────
+    setBadge('badgeEstimate', 'running');
+    log('Fetching estimate...');
+    let estimate;
+    try {
+      estimate = await callEndpoint({ pass: 'estimate' });
+      dirsTotal = estimate.dirsQueueSize;
+      claudeTotal = estimate.claudeQueueSize;
+      setBadge('badgeEstimate', 'done');
+      document.getElementById('subEstimate').textContent =
+        `${dirsTotal} leads need directories · ${claudeTotal} already in Claude queue · Projected max cost: $${estimate.estimatedClaudeCostUsd}`;
+      log(`Estimate: ${dirsTotal} for dirs, ${claudeTotal} already in Claude queue, max ~$${estimate.estimatedClaudeCostUsd}`);
+      setRemaining(dirsTotal + claudeTotal);
+    } catch (e) {
+      setBadge('badgeEstimate', 'error');
+      log('Estimate failed: ' + e.message, 'err');
+      document.getElementById('btn').disabled = false;
+      return;
+    }
+
+    // ── Directories pass ─────────────────────────────────────────────────────
+    if (dirsTotal > 0) {
+      setBadge('badgeDirs', 'running');
+      log(`Starting directories pass (${dirsTotal} leads, ${Math.ceil(dirsTotal / DIRS_LIMIT)} batches)...`);
+      let offset = 0;
+      let dirsProcessed = 0;
+      while (true) {
+        let result;
+        try {
+          result = await callEndpoint({ pass: 'dirs', limit: DIRS_LIMIT, offset });
+        } catch (e) {
+          log('Dirs batch error: ' + e.message, 'err');
+          break;
+        }
+        totalFound += result.found || 0;
+        totalNotFound += result.notFound || 0;
+        totalErrors += result.errors || 0;
+        dirsProcessed += result.total || 0;
+        updateStats();
+        const pct = dirsTotal > 0 ? Math.round((dirsProcessed / dirsTotal) * 100) : 100;
+        document.getElementById('progDirs').style.width = pct + '%';
+        setRemaining(result.remaining + claudeTotal);
+        log(`Dirs batch ${offset}–${offset + DIRS_LIMIT}: +${result.found} found, ${result.notFound} not found (${result.remaining} remaining)`);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        await new Promise(r => setTimeout(r, 500));
+      }
+      setBadge('badgeDirs', 'done');
+      document.getElementById('subDirs').textContent =
+        `Complete — found ${totalFound} emails from directories`;
+      log('Directories pass complete.');
+    } else {
+      setBadge('badgeDirs', 'done');
+      document.getElementById('subDirs').textContent = 'No leads to process in this pass';
+      log('No email:not-found leads to process through directories.');
+    }
+
+    // ── Claude pass ───────────────────────────────────────────────────────────
+    // Re-estimate claude queue (dirs pass just added to it)
+    let claudeEst;
+    try {
+      claudeEst = await callEndpoint({ pass: 'estimate' });
+      claudeTotal = claudeEst.claudeQueueSize;
+    } catch { /* use existing claudeTotal */ }
+
+    if (claudeTotal > 0) {
+      setBadge('badgeClaude', 'running');
+      log(`Starting Claude pass (${claudeTotal} leads, ${Math.ceil(claudeTotal / CLAUDE_LIMIT)} batches)...`);
+      let offset = 0;
+      let claudeProcessed = 0;
+      let claudeFound = 0;
+      while (true) {
+        let result;
+        try {
+          result = await callEndpoint({ pass: 'claude', limit: CLAUDE_LIMIT, offset });
+        } catch (e) {
+          log('Claude batch error: ' + e.message, 'err');
+          break;
+        }
+        claudeFound += result.found || 0;
+        totalFound += result.found || 0;
+        totalNotFound += result.notFound || 0;
+        totalErrors += result.errors || 0;
+        totalCostUsd += result.estimatedCostUsd || 0;
+        claudeProcessed += result.total || 0;
+        updateStats();
+        const pct = claudeTotal > 0 ? Math.round((claudeProcessed / claudeTotal) * 100) : 100;
+        document.getElementById('progClaude').style.width = pct + '%';
+        setRemaining(result.remaining);
+        log(`Claude batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found, cost $${(result.estimatedCostUsd||0).toFixed(4)} (${result.remaining} remaining)`);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        await new Promise(r => setTimeout(r, 800));
+      }
+      setBadge('badgeClaude', 'done');
+      document.getElementById('subClaude').textContent =
+        `Complete — found ${claudeFound} additional emails. Total Claude cost: $${totalCostUsd.toFixed(4)}`;
+      log('Claude pass complete.');
+    } else {
+      setBadge('badgeClaude', 'done');
+      document.getElementById('subClaude').textContent = 'No leads passed from directories';
+      log('No email:dirs-tried leads to process through Claude.');
+    }
+
+    setRemaining(0);
+    updateStats();
+    document.getElementById('doneBanner').style.display = 'block';
+    log(`All done. ${totalFound} emails found total. Claude cost: $${totalCostUsd.toFixed(4)}`);
+    document.getElementById('btn').textContent = 'Run Again';
+    document.getElementById('btn').disabled = false;
+  }
+</script>
+</body>
+</html>
