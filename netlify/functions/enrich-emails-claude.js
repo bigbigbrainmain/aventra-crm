@@ -46,7 +46,7 @@ async function doWebSearch(query) {
     const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&mkt=en-GB&count=5`;
     const res = await fetch(url, {
       headers: { 'User-Agent': UA, 'Accept-Language': 'en-GB,en;q=0.9' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(3500),
     });
     if (!res.ok) return `Search returned ${res.status}`;
     const text = stripHtml(await res.text());
@@ -60,7 +60,7 @@ async function doFetchPage(url) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': UA, 'Accept-Language': 'en-GB,en;q=0.9' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(3500),
     });
     if (!res.ok) return `Page returned ${res.status}`;
     const text = stripHtml(await res.text());
@@ -115,7 +115,7 @@ async function findEmailWithClaude(lead) {
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
-  for (let turn = 0; turn < 6; turn++) {
+  for (let turn = 0; turn < 4; turn++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -169,7 +169,7 @@ exports.handler = async (event) => {
   }
 
   const params = event.queryStringParameters || {};
-  const limit = parseInt(params.limit || '2');
+  const limit = parseInt(params.limit || '1');
   const offset = parseInt(params.offset || '0');
 
   const rows = await getRange(TABS.LEADS, 'A2:AA');

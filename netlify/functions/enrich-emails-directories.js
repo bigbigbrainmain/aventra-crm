@@ -140,7 +140,7 @@ async function enrichViaDirectories(lead) {
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
-  const limit = parseInt(params.limit || '4');
+  const limit = parseInt(params.limit || '5');
   const offset = parseInt(params.offset || '0');
 
   const rows = await getRange(TABS.LEADS, 'A2:AA');
