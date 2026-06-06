@@ -104,36 +104,35 @@ export default function OutreachFlow({ leads = [] }) {
       ...(lost > 0     ? [{ name: 'Lost/Dropped' }] : []),
     ];
 
-    const idx = Object.fromEntries(nodes.map((n, i) => [n.name, i]));
-    const has = name => idx[name] !== undefined;
+    const has = name => nodes.some(n => n.name === name);
 
     const links = [
       // Source → email status
-      { source: idx['Manual'],    target: idx['Has Email'], value: Math.round(manual * withEmail / leads.length) || 1 },
-      { source: idx['Manual'],    target: idx['No Email'],  value: Math.round(manual * noEmail  / leads.length) || 1 },
+      { source: 'Manual',         target: 'Has Email', value: Math.max(1, Math.round(manual * withEmail / leads.length)) },
+      { source: 'Manual',         target: 'No Email',  value: Math.max(1, Math.round(manual * noEmail   / leads.length)) },
       ...(auto > 0 ? [
-        { source: idx['Auto-Generated'], target: idx['Has Email'], value: Math.round(auto * withEmail / leads.length) || 1 },
-        { source: idx['Auto-Generated'], target: idx['No Email'],  value: Math.round(auto * noEmail  / leads.length) || 1 },
+        { source: 'Auto-Generated', target: 'Has Email', value: Math.max(1, Math.round(auto * withEmail / leads.length)) },
+        { source: 'Auto-Generated', target: 'No Email',  value: Math.max(1, Math.round(auto * noEmail   / leads.length)) },
       ] : []),
 
       // Email status → outreach
-      ...(has('Emailed') ? [{ source: idx['Has Email'], target: idx['Emailed'], value: emailed }] : []),
-      ...(has('Backlog')  ? [{ source: idx['Has Email'], target: idx['Backlog'], value: backlog }] : []),
+      ...(has('Emailed') ? [{ source: 'Has Email', target: 'Emailed', value: emailed }] : []),
+      ...(has('Backlog')  ? [{ source: 'Has Email', target: 'Backlog',  value: backlog  }] : []),
 
       // Emailed → engagement
-      ...(has('Opened')     ? [{ source: idx['Emailed'], target: idx['Opened'],     value: opened }]    : []),
-      ...(has('Not Opened') ? [{ source: idx['Emailed'], target: idx['Not Opened'], value: notOpened }] : []),
+      ...(has('Opened')     ? [{ source: 'Emailed', target: 'Opened',     value: opened     }] : []),
+      ...(has('Not Opened') ? [{ source: 'Emailed', target: 'Not Opened', value: notOpened  }] : []),
 
       // Engagement → reply
-      ...(has('Replied')    && replied   > 0 ? [{ source: idx['Opened'], target: idx['Replied'],     value: replied }]    : []),
-      ...(has('No Reply')   && noReply   > 0 ? [{ source: idx['Opened'], target: idx['No Reply'],    value: noReply }]    : []),
-      ...(has('Followed Up')&& followedUp> 0 ? [{ source: idx['Not Opened'], target: idx['Followed Up'], value: followedUp }] : []),
+      ...(has('Replied')     && replied    > 0 ? [{ source: 'Opened',     target: 'Replied',     value: replied    }] : []),
+      ...(has('No Reply')    && noReply    > 0 ? [{ source: 'Opened',     target: 'No Reply',    value: noReply    }] : []),
+      ...(has('Followed Up') && followedUp > 0 ? [{ source: 'Not Opened', target: 'Followed Up', value: followedUp }] : []),
 
       // Reply → outcome
-      ...(has('Won')          && won > 0      ? [{ source: idx['Replied'], target: idx['Won'],          value: won }]      : []),
-      ...(has('Proposal')     && proposal > 0 ? [{ source: idx['Replied'], target: idx['Proposal'],     value: proposal }] : []),
-      ...(has('Lost/Dropped') && lost > 0     ? [{ source: idx['Emailed'], target: idx['Lost/Dropped'], value: lost }]     : []),
-    ].filter(l => l.value > 0 && l.source !== undefined && l.target !== undefined && l.source !== l.target);
+      ...(has('Won')          && won      > 0 ? [{ source: 'Replied', target: 'Won',          value: won      }] : []),
+      ...(has('Proposal')     && proposal > 0 ? [{ source: 'Replied', target: 'Proposal',     value: proposal }] : []),
+      ...(has('Lost/Dropped') && lost     > 0 ? [{ source: 'Emailed', target: 'Lost/Dropped', value: lost     }] : []),
+    ].filter(l => l.value > 0 && l.source !== l.target && has(l.source) && has(l.target));
 
     return { nodes, links };
   }, [leads]);
