@@ -121,7 +121,7 @@
 <script>
   const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
   const DIRS_LIMIT = 3;
-  const CLAUDE_LIMIT = 4;
+  const CLAUDE_LIMIT = 1;
 
   let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
   let dirsTotal = 0, claudeTotal = 0;
@@ -280,6 +280,13 @@
         try {
           result = await callEndpoint({ pass: 'claude', limit: CLAUDE_LIMIT, offset });
         } catch (e) {
+          if (e.message.includes('502')) {
+            log(`Lead at offset ${offset} timed out — skipping`, 'err');
+            offset++;
+            claudeProcessed++;
+            if (offset >= claudeTotal) break;
+            continue;
+          }
           log('Claude batch error: ' + e.message, 'err');
           break;
         }

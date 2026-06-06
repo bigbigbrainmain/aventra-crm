@@ -194,7 +194,7 @@ If you cannot find one after searching, reply with exactly:
 NOT_FOUND
 
 Rules:
-- Max 5 tool calls total — be efficient
+- Max 3 tool calls total — be efficient
 - Skip noreply@, webmaster@, postmaster@ and platform emails (@wix.com, @squarespace.com)
 - Real business emails only`;
 
@@ -202,7 +202,7 @@ async function doWebSearch(query) {
   try {
     const res = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(query)}&mkt=en-GB&count=5`, {
       headers: { 'User-Agent': UA, 'Accept-Language': 'en-GB,en;q=0.9' },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(4000),
     });
     if (!res.ok) return `Search returned ${res.status}`;
     return stripHtml(await res.text()).substring(0, 3000);
@@ -213,7 +213,7 @@ async function doFetchPage(url) {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(4000),
     });
     if (!res.ok) return `Page returned ${res.status}`;
     return stripHtml(await res.text()).substring(0, 4000);
@@ -229,7 +229,7 @@ async function runClaudeOnLead(lead) {
   let inputTokens = 0;
   let outputTokens = 0;
 
-  for (let turn = 0; turn < 6; turn++) {
+  for (let turn = 0; turn < 4; turn++) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -280,7 +280,7 @@ async function runClaudeOnLead(lead) {
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const pass = params.pass || 'estimate';
-  const limit = parseInt(params.limit || (pass === 'dirs' ? '12' : '4'));
+  const limit = parseInt(params.limit || (pass === 'dirs' ? '3' : '1'));
   const offset = parseInt(params.offset || '0');
 
   const rows = await getRange(TABS.LEADS, 'A2:AA');
