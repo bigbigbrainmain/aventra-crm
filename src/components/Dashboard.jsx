@@ -400,6 +400,9 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
         <StatCard label="Total MRR"           value={currentMrr > 0 ? `£${currentMrr.toLocaleString()}` : '—'} color="text-emerald-600" onClick={() => setView('customers')} />
       </div>
 
+      {/* Outreach pipeline flow */}
+      <OutreachFlow leads={leads} />
+
       {/* Funnel + Closed Won by month */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
 
@@ -513,9 +516,6 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
           </ResponsiveContainer>
         )}
       </div>
-
-      {/* Outreach pipeline flow */}
-      <OutreachFlow leads={leads} />
 
       {/* Tasks + Recent Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

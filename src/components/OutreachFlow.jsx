@@ -137,9 +137,9 @@ export default function OutreachFlow({ leads = [] }) {
     return { nodes, links };
   }, [leads]);
 
-  const WIDTH  = 860;
-  const HEIGHT = 380;
-  const PAD    = { top: 24, right: 140, bottom: 16, left: 110 };
+  const WIDTH  = 1100;
+  const HEIGHT = 400;
+  const PAD    = { top: 24, right: 150, bottom: 16, left: 110 };
 
   const { nodes: layoutNodes, links: layoutLinks } = useMemo(() => {
     if (!graph) return { nodes: [], links: [] };
