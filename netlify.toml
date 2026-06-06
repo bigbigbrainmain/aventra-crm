@@ -9,6 +9,14 @@
 [functions."auto-lead-gen"]
   schedule = "0 7,12 * * 1-5"
 
+[functions."enrich-emails-directories"]
+  schedule = "15 7,12 * * 1-5"
+  timeout = 26
+
+[functions."enrich-emails-claude"]
+  schedule = "45 7,12 * * 1-5"
+  timeout = 26
+
 [functions."auto-followup"]
   schedule = "0 8,13 * * 1-5"
 
@@ -19,6 +27,9 @@
   timeout = 26
 
 [functions."backfill-emails"]
+  timeout = 26
+
+[functions."backfill-email-enrichment"]
   timeout = 26
 
 [functions."backfill-reviews"]
