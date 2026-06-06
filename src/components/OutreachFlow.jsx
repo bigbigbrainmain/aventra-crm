@@ -52,7 +52,7 @@ export default function OutreachFlow({ leads = [] }) {
     // Classify leads
     // "Auto-Generated" = has reviewCount > 0 (set by Places API) or created by auto-lead-gen
     // For now all existing leads are Manual; future auto leads will have reviewCount set at creation
-    const auto   = leads.filter(l => l.reviewCount > 0 && l.outreachCount === 0).length;
+    const auto   = leads.filter(l => l.source === 'auto').length;
     const manual = leads.length - auto;
 
     const withEmail  = leads.filter(l => l.email).length;

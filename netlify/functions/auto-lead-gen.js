@@ -279,7 +279,7 @@ exports.handler = async () => {
             lead.email, lead.phone, lead.website,
             '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
             '', '', '', '', '', '', '', '',
-            lead.reviewCount || 0, lead.avgRating || 0,
+            lead.reviewCount || 0, lead.avgRating || 0, 'auto',
           ]);
 
           if (lead.email) {
