@@ -130,7 +130,7 @@
 <script>
   const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
   const DIRS_LIMIT = 3;
-  const CLAUDE_LIMIT = 1;
+  const CLAUDE_LIMIT = 5;
   const RESET_LIMIT = 10;
 
   let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
@@ -358,7 +358,7 @@
         const pct = claudeTotal > 0 ? Math.round((claudeProcessed / claudeTotal) * 100) : 100;
         document.getElementById('progClaude').style.width = pct + '%';
         setRemaining(result.remaining);
-        log(`Claude batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found, $${(result.estimatedCostUsd||0).toFixed(4)} (${result.remaining} remaining)`);
+        log(`Google CSE batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found (${result.remaining} remaining)`);
         if (result.remaining === 0) break;
         offset = result.nextOffset;
         await new Promise(r => setTimeout(r, 800));
@@ -366,7 +366,7 @@
       setBadge('badgeClaude', aborted ? 'pending' : 'done');
       document.getElementById('subClaude').textContent = aborted
         ? `Paused — click Resume to continue`
-        : `Complete — found ${claudeFound} additional emails · Total Claude cost: $${totalCostUsd.toFixed(4)}`;
+        : `Complete — found ${claudeFound} additional emails (Google CSE — no cost)`;
       if (!aborted) log('Claude pass complete.');
     } else {
       setBadge('badgeClaude', 'done');

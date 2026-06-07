@@ -1,8 +1,6 @@
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
 
-// Sonnet 4.6 pricing per million tokens
-const PRICE_INPUT_PER_M = 3.00;
-const PRICE_OUTPUT_PER_M = 15.00;
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 const EXCLUDED_DOMAINS = new Set([
   'example.com', 'sentry.io', 'wixpress.com', 'squarespace.com', 'wordpress.com',
@@ -29,67 +27,94 @@ function isValidEmail(email) {
   return true;
 }
 
-// Anthropic server-side tools — no client-side execution needed
-const TOOLS = [
-  { type: 'web_search_20260209', name: 'web_search' },
-  { type: 'web_fetch_20260209', name: 'web_fetch' },
-];
+function extractEmail(text) {
+  // Try mailto links first (for HTML)
+  const mailtoRe = /href=["']mailto:([^"'?\s]+)/gi;
+  let m;
+  while ((m = mailtoRe.exec(text)) !== null) {
+    const e = decodeURIComponent(m[1]).trim().toLowerCase();
+    if (isValidEmail(e)) return e;
+  }
+  // Then plain email pattern (works on both HTML and plain text snippets)
+  const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  let match;
+  while ((match = EMAIL_RE.exec(text)) !== null) {
+    const e = match[0].toLowerCase();
+    if (isValidEmail(e)) return e;
+  }
+  return null;
+}
 
-const SYSTEM = `You find email addresses for UK small businesses.
+async function fetchHtml(url, timeoutMs = 4000) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': UA, 'Accept-Language': 'en-GB,en;q=0.9' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) return await res.text();
+  } catch { /* timeout or network error */ }
+  return null;
+}
 
-Given a business name, city, and optional website, search for their real contact email.
+async function searchGoogleCSE(query, key, cx) {
+  try {
+    const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(query)}&num=5`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.items || [];
+  } catch { return []; }
+}
 
-Good sources: their website contact/about pages, yell.com, checkatrade.com, ratedpeople.com, trustatrader.com, google maps listing pages.
+async function findEmailViaGoogle(lead) {
+  const key = process.env.GOOGLE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
+  if (!key || !cx) return null;
 
-When you find a valid email address, reply with exactly:
-FOUND: email@domain.com
+  // Pass 1: search snippets directly for email address
+  const items1 = await searchGoogleCSE(
+    `"${lead.businessName}" "${lead.city}" email contact`,
+    key, cx
+  );
+  for (const item of items1) {
+    const email = extractEmail((item.snippet || '') + ' ' + (item.title || ''));
+    if (email) { console.log(`[enrich-claude] found in snippet: ${email}`); return email; }
+  }
 
-If you cannot find one after searching, reply with exactly:
-NOT_FOUND
+  // Pass 2: fetch top result pages
+  for (const item of items1.slice(0, 2)) {
+    if (!item.link) continue;
+    const html = await fetchHtml(item.link);
+    if (!html) continue;
+    const email = extractEmail(html);
+    if (email) { console.log(`[enrich-claude] found in page (${item.link}): ${email}`); return email; }
+  }
 
-Rules:
-- Skip noreply@, webmaster@, postmaster@, and platform emails (e.g. @wix.com, @squarespace.com)
-- Real business emails only (e.g. john@smithplumbing.co.uk, info@acmecleaning.com)`;
+  // Pass 3: look for directory listings (yell, checkatrade, etc.)
+  const items2 = await searchGoogleCSE(
+    `"${lead.businessName}" "${lead.city}" site:yell.com OR site:checkatrade.com OR site:ratedpeople.com OR site:trustatrader.com`,
+    key, cx
+  );
+  for (const item of items2.slice(0, 2)) {
+    if (!item.link) continue;
+    const html = await fetchHtml(item.link);
+    if (!html) continue;
+    const email = extractEmail(html);
+    if (email) { console.log(`[enrich-claude] found in directory (${item.link}): ${email}`); return email; }
+  }
 
-async function findEmailWithClaude(lead) {
-  const userMsg = `Find the contact email for: "${lead.businessName}" in ${lead.city}, UK.${lead.website ? ` Website: ${lead.website}` : ''} Industry: ${lead.industry}.`;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: SYSTEM,
-      tools: TOOLS,
-      messages: [{ role: 'user', content: userMsg }],
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-
-  const totalInputTokens = data.usage?.input_tokens || 0;
-  const totalOutputTokens = data.usage?.output_tokens || 0;
-
-  const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
-  const match = /FOUND:\s*([^\s\n]+)/i.exec(text);
-  const email = match ? match[1].toLowerCase().replace(/[.,;]$/, '') : null;
-
-  return { email: email && isValidEmail(email) ? email : null, totalInputTokens, totalOutputTokens };
+  return null;
 }
 
 exports.handler = async (event) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { statusCode: 200, body: JSON.stringify({ error: 'No ANTHROPIC_API_KEY' }) };
+  const key = process.env.GOOGLE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
+  if (!key || !cx) {
+    return { statusCode: 200, body: JSON.stringify({ error: 'GOOGLE_API_KEY or GOOGLE_CSE_CX not set' }) };
   }
 
   const params = event.queryStringParameters || {};
-  const limit = parseInt(params.limit || '1');
+  const limit = parseInt(params.limit || '3');
   const offset = parseInt(params.offset || '0');
 
   const rows = await getRange(TABS.LEADS, 'A2:AA');
@@ -102,21 +127,16 @@ exports.handler = async (event) => {
 
   console.log(`[enrich-claude] Processing ${batch.length}/${targets.length} (offset=${offset}, ${remaining} remaining)`);
 
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
   const stats = { found: 0, notFound: 0, errors: 0, total: batch.length, remaining, nextOffset: offset + batch.length };
 
   for (const { lead, rowNum } of batch) {
     try {
-      const result = await findEmailWithClaude(lead);
-      totalInputTokens += result.totalInputTokens;
-      totalOutputTokens += result.totalOutputTokens;
-
-      if (result.email) {
-        await updateCell(TABS.LEADS, `E${rowNum}`, result.email);
+      const email = await findEmailViaGoogle(lead);
+      if (email) {
+        await updateCell(TABS.LEADS, `E${rowNum}`, email);
         await updateCell(TABS.LEADS, `I${rowNum}`, '');
         stats.found++;
-        console.log(`[enrich-claude] ✓ ${lead.businessName}: ${result.email}`);
+        console.log(`[enrich-claude] ✓ ${lead.businessName}: ${email}`);
       } else {
         await updateCell(TABS.LEADS, `I${rowNum}`, 'email:all-tried');
         stats.notFound++;
@@ -128,15 +148,7 @@ exports.handler = async (event) => {
     }
   }
 
-  const estimatedCostUsd = parseFloat((
-    (totalInputTokens / 1_000_000) * PRICE_INPUT_PER_M +
-    (totalOutputTokens / 1_000_000) * PRICE_OUTPUT_PER_M
-  ).toFixed(4));
-
-  stats.tokens = { input: totalInputTokens, output: totalOutputTokens };
-  stats.estimatedCostUsd = estimatedCostUsd;
-
-  console.log(`[enrich-claude] Done: ${stats.found} found, ${stats.notFound} not found, ~$${estimatedCostUsd} (${totalInputTokens}in/${totalOutputTokens}out tokens)`);
+  console.log(`[enrich-claude] Done: ${stats.found} found, ${stats.notFound} not found, ${stats.errors} errors`);
 
   return {
     statusCode: 200,
