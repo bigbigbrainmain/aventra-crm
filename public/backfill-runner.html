@@ -130,7 +130,7 @@
 <script>
   const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
   const DIRS_LIMIT = 3;
-  const CLAUDE_LIMIT = 1;
+  const CLAUDE_LIMIT = 5;
   const RESET_LIMIT = 10;
 
   let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
@@ -214,13 +214,13 @@
     try {
       estimate = await callEndpoint({ pass: 'estimate' });
       dirsTotal = estimate.dirsQueueSize;
-      claudeTotal = estimate.claudeQueueSize;
-      resetTotal = estimate.allTriedQueueSize || 0;
+      claudeTotal = estimate.googleCseQueueSize || estimate.claudeQueueSize || 0;
+      resetTotal = 0;
       setBadge('badgeEstimate', 'done');
       document.getElementById('subEstimate').textContent =
-        `${dirsTotal} need dirs · ${claudeTotal} in Claude queue · ${resetTotal} to reset & retry · Max cost: $${estimate.estimatedClaudeCostUsd}`;
-      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Claude queue, ${resetTotal} all-tried to reset, max ~$${estimate.estimatedClaudeCostUsd}`);
-      setRemaining(resetTotal + dirsTotal + claudeTotal);
+        `${dirsTotal} need dirs · ${claudeTotal} in Google CSE queue · ${estimate.claudeAutoQueueSize || 0} queued for Claude AI (runs automatically)`;
+      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Google CSE queue, ${estimate.claudeAutoQueueSize || 0} for Claude AI auto-enrichment`);
+      setRemaining(dirsTotal + claudeTotal);
     } catch (e) {
       setBadge('badgeEstimate', 'error');
       log('Estimate failed: ' + e.message, 'err');
@@ -257,7 +257,7 @@
         log(`Reset complete. ${resetDone} leads requeued for Claude.`);
         try {
           const re = await callEndpoint({ pass: 'estimate' });
-          claudeTotal = re.claudeQueueSize;
+          claudeTotal = re.googleCseQueueSize || re.claudeQueueSize || 0;
           dirsTotal = re.dirsQueueSize;
         } catch { /* keep old counts */ }
       }
@@ -326,7 +326,7 @@
     // ── Claude pass ───────────────────────────────────────────────────────────
     try {
       const claudeEst = await callEndpoint({ pass: 'estimate' });
-      claudeTotal = claudeEst.claudeQueueSize;
+      claudeTotal = claudeEst.googleCseQueueSize || claudeEst.claudeQueueSize || 0;
     } catch { /* use existing claudeTotal */ }
 
     if (claudeTotal > 0) {
@@ -358,7 +358,7 @@
         const pct = claudeTotal > 0 ? Math.round((claudeProcessed / claudeTotal) * 100) : 100;
         document.getElementById('progClaude').style.width = pct + '%';
         setRemaining(result.remaining);
-        log(`Claude batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found, $${(result.estimatedCostUsd||0).toFixed(4)} (${result.remaining} remaining)`);
+        log(`Google CSE batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found (${result.remaining} remaining)`);
         if (result.remaining === 0) break;
         offset = result.nextOffset;
         await new Promise(r => setTimeout(r, 800));
@@ -366,7 +366,7 @@
       setBadge('badgeClaude', aborted ? 'pending' : 'done');
       document.getElementById('subClaude').textContent = aborted
         ? `Paused — click Resume to continue`
-        : `Complete — found ${claudeFound} additional emails · Total Claude cost: $${totalCostUsd.toFixed(4)}`;
+        : `Complete — found ${claudeFound} additional emails (Google CSE — no cost)`;
       if (!aborted) log('Claude pass complete.');
     } else {
       setBadge('badgeClaude', 'done');

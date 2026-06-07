@@ -32,7 +32,7 @@ function getClient() {
 // Q(16)=Proposal URL, R(17)=Proposal Folder,
 // S(18)=outreachSentAt, T(19)=outreachCount, U(20)=lastOutreachAt,
 // V(21)=emailOpenedAt, W(22)=outreachOptedOut, X(23)=primaryContact
-// Y(24)=reviewCount, Z(25)=avgRating, AA(26)=source
+// Y(24)=reviewCount, Z(25)=avgRating, AA(26)=source, AB(27)=emailEnriched
 function rowToLead(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -62,6 +62,7 @@ function rowToLead(row, rowNum) {
     reviewCount: Number(row[24]) || 0,
     avgRating: Number(row[25]) || 0,
     source: String(row[26] || 'manual'),
+    emailEnriched: row[27] === 'TRUE' || row[27] === true,
     _row: rowNum,
   };
 }

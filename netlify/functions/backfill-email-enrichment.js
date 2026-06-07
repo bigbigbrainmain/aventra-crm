@@ -20,12 +20,6 @@
 
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
 
-// Sonnet 4.6 pricing
-const PRICE_INPUT_PER_M = 3.00;
-const PRICE_OUTPUT_PER_M = 15.00;
-const AVG_INPUT_TOKENS_PER_LEAD = 5000;
-const AVG_OUTPUT_TOKENS_PER_LEAD = 300;
-
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 const EXCLUDED_DOMAINS = new Set([
@@ -156,61 +150,56 @@ async function runDirsOnLead(lead) {
   return null;
 }
 
-// ── Claude pass ───────────────────────────────────────────────────────────────
+// ── Google CSE pass ───────────────────────────────────────────────────────────
 
-// Anthropic server-side tools — executed on Anthropic's infrastructure, bypassing cloud IP blocks
-const CLAUDE_TOOLS = [
-  { type: 'web_search_20260209', name: 'web_search' },
-  { type: 'web_fetch_20260209', name: 'web_fetch' },
-];
+async function searchGoogleCSE(query, key, cx) {
+  try {
+    const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(query)}&num=5`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.items || [];
+  } catch { return []; }
+}
 
-const SYSTEM = `You find email addresses for UK small businesses.
+async function findEmailViaGoogle(lead) {
+  const key = process.env.GOOGLE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
+  if (!key || !cx) return null;
 
-Given a business name, city, and optional website, search for their real contact email.
+  // Pass 1: search snippets directly for email address
+  const items1 = await searchGoogleCSE(
+    `"${lead.businessName}" "${lead.city}" email contact`,
+    key, cx
+  );
+  for (const item of items1) {
+    const email = extractEmail((item.snippet || '') + ' ' + (item.title || ''));
+    if (email) { console.log(`[backfill-claude] found in snippet: ${email}`); return email; }
+  }
 
-Good sources: their website contact/about pages, yell.com, checkatrade.com, ratedpeople.com, trustatrader.com, google maps listing pages.
+  // Pass 2: fetch top result pages
+  for (const item of items1.slice(0, 2)) {
+    if (!item.link) continue;
+    const html = await fetchHtml(item.link);
+    if (!html) continue;
+    const email = extractEmail(html);
+    if (email) { console.log(`[backfill-claude] found in page (${item.link}): ${email}`); return email; }
+  }
 
-When you find a valid email address, reply with exactly:
-FOUND: email@domain.com
+  // Pass 3: look for directory listings (yell, checkatrade, etc.)
+  const items2 = await searchGoogleCSE(
+    `"${lead.businessName}" "${lead.city}" site:yell.com OR site:checkatrade.com OR site:ratedpeople.com OR site:trustatrader.com`,
+    key, cx
+  );
+  for (const item of items2.slice(0, 2)) {
+    if (!item.link) continue;
+    const html = await fetchHtml(item.link);
+    if (!html) continue;
+    const email = extractEmail(html);
+    if (email) { console.log(`[backfill-claude] found in directory (${item.link}): ${email}`); return email; }
+  }
 
-If you cannot find one after searching, reply with exactly:
-NOT_FOUND
-
-Rules:
-- Skip noreply@, webmaster@, postmaster@ and platform emails (@wix.com, @squarespace.com)
-- Real business emails only`;
-
-async function runClaudeOnLead(lead) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: SYSTEM,
-      tools: CLAUDE_TOOLS,
-      messages: [{
-        role: 'user',
-        content: `Find the contact email for: "${lead.businessName}" in ${lead.city}, UK.${lead.website ? ` Website: ${lead.website}` : ''} Industry: ${lead.industry}.`,
-      }],
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-  const data = await res.json();
-
-  const inputTokens = data.usage?.input_tokens || 0;
-  const outputTokens = data.usage?.output_tokens || 0;
-
-  const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
-  const match = /FOUND:\s*([^\s\n]+)/i.exec(text);
-  const email = match ? match[1].toLowerCase().replace(/[.,;]$/, '') : null;
-
-  return { email: email && isValidEmail(email) ? email : null, inputTokens, outputTokens };
+  return null;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -218,32 +207,25 @@ async function runClaudeOnLead(lead) {
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const pass = params.pass || 'estimate';
-  const limit = parseInt(params.limit || (pass === 'dirs' ? '3' : '1'));
+  const limit = parseInt(params.limit || (pass === 'dirs' ? '3' : '5'));
   const offset = parseInt(params.offset || '0');
 
-  const rows = await getRange(TABS.LEADS, 'A2:AA');
+  const rows = await getRange(TABS.LEADS, 'A2:AB');
   const leads = rows.map((row, i) => ({ lead: rowToLead(row, i + 2), rowNum: i + 2 }));
 
   // ── Estimate mode ─────────────────────────────────────────────────────────
   if (pass === 'estimate') {
     const dirsCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:not-found').length;
-    const claudeCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:dirs-tried').length;
-    const allTriedCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:all-tried').length;
-    const totalForClaude = dirsCount + claudeCount;
-    const estimatedCost = parseFloat((
-      (totalForClaude * AVG_INPUT_TOKENS_PER_LEAD / 1_000_000) * PRICE_INPUT_PER_M +
-      (totalForClaude * AVG_OUTPUT_TOKENS_PER_LEAD / 1_000_000) * PRICE_OUTPUT_PER_M
-    ).toFixed(2));
-
+    const googleCseCount = leads.filter(({ lead }) => lead.id && !lead.email && (lead.priorityReason === 'email:dirs-tried' || lead.priorityReason === 'email:all-tried')).length;
+    const claudeQueueCount = leads.filter(({ lead }) => lead.id && !lead.email && !lead.emailEnriched).length;
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         dirsQueueSize: dirsCount,
-        claudeQueueSize: claudeCount,
-        allTriedQueueSize: allTriedCount,
-        estimatedClaudeCostUsd: estimatedCost,
-        estimatedClaudeCostGbp: parseFloat((estimatedCost * 0.79).toFixed(2)),
+        googleCseQueueSize: googleCseCount,
+        claudeAutoQueueSize: claudeQueueCount,
+        note: 'Dirs + Google CSE pass run here. Claude AI enrichment runs automatically every 30 min via scheduled background function.',
       }),
     };
   }
@@ -304,34 +286,31 @@ exports.handler = async (event) => {
     };
   }
 
-  // ── Claude pass ───────────────────────────────────────────────────────────
+  // ── Google CSE pass (formerly Claude pass) ───────────────────────────────
   if (pass === 'claude') {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return { statusCode: 200, body: JSON.stringify({ error: 'No ANTHROPIC_API_KEY configured' }) };
+    const key = process.env.GOOGLE_API_KEY;
+    const cx = process.env.GOOGLE_CSE_CX;
+    if (!key || !cx) {
+      return { statusCode: 200, body: JSON.stringify({ error: 'GOOGLE_API_KEY or GOOGLE_CSE_CX not set' }) };
     }
 
     const targets = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:dirs-tried');
     const batch = targets.slice(offset, offset + limit);
     const remaining = Math.max(0, targets.length - offset - batch.length);
-
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
     const stats = { pass: 'claude', found: 0, notFound: 0, errors: 0, total: batch.length, remaining, nextOffset: offset + batch.length };
 
     for (const { lead, rowNum } of batch) {
       try {
-        const result = await runClaudeOnLead(lead);
-        totalInputTokens += result.inputTokens;
-        totalOutputTokens += result.outputTokens;
-
-        if (result.email) {
-          await updateCell(TABS.LEADS, `E${rowNum}`, result.email);
+        const email = await findEmailViaGoogle(lead);
+        if (email) {
+          await updateCell(TABS.LEADS, `E${rowNum}`, email);
           await updateCell(TABS.LEADS, `I${rowNum}`, '');
           stats.found++;
-          console.log(`[backfill-claude] ✓ ${lead.businessName}: ${result.email}`);
+          console.log(`[backfill-claude] ✓ ${lead.businessName}: ${email}`);
         } else {
           await updateCell(TABS.LEADS, `I${rowNum}`, 'email:all-tried');
           stats.notFound++;
+          console.log(`[backfill-claude] ✗ ${lead.businessName}: not found`);
         }
       } catch (err) {
         console.error(`[backfill-claude] Error ${lead.businessName}:`, err.message);
@@ -339,13 +318,7 @@ exports.handler = async (event) => {
       }
     }
 
-    stats.tokens = { input: totalInputTokens, output: totalOutputTokens };
-    stats.estimatedCostUsd = parseFloat((
-      (totalInputTokens / 1_000_000) * PRICE_INPUT_PER_M +
-      (totalOutputTokens / 1_000_000) * PRICE_OUTPUT_PER_M
-    ).toFixed(4));
-
-    if (remaining === 0) stats.message = 'Claude pass complete. All leads processed.';
+    if (remaining === 0) stats.message = 'Google CSE pass complete. All leads processed.';
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
