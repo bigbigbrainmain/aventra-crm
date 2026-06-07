@@ -207,27 +207,25 @@ async function findEmailViaGoogle(lead) {
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const pass = params.pass || 'estimate';
-  const limit = parseInt(params.limit || (pass === 'dirs' ? '3' : '1'));
+  const limit = parseInt(params.limit || (pass === 'dirs' ? '3' : '5'));
   const offset = parseInt(params.offset || '0');
 
-  const rows = await getRange(TABS.LEADS, 'A2:AA');
+  const rows = await getRange(TABS.LEADS, 'A2:AB');
   const leads = rows.map((row, i) => ({ lead: rowToLead(row, i + 2), rowNum: i + 2 }));
 
   // ── Estimate mode ─────────────────────────────────────────────────────────
   if (pass === 'estimate') {
     const dirsCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:not-found').length;
-    const claudeCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:dirs-tried').length;
-    const allTriedCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:all-tried').length;
+    const googleCseCount = leads.filter(({ lead }) => lead.id && !lead.email && (lead.priorityReason === 'email:dirs-tried' || lead.priorityReason === 'email:all-tried')).length;
+    const claudeQueueCount = leads.filter(({ lead }) => lead.id && !lead.email && !lead.emailEnriched).length;
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       body: JSON.stringify({
         dirsQueueSize: dirsCount,
-        claudeQueueSize: claudeCount,
-        allTriedQueueSize: allTriedCount,
-        estimatedClaudeCostUsd: 0,
-        estimatedClaudeCostGbp: 0,
-        note: 'Google CSE pass — no Anthropic cost',
+        googleCseQueueSize: googleCseCount,
+        claudeAutoQueueSize: claudeQueueCount,
+        note: 'Dirs + Google CSE pass run here. Claude AI enrichment runs automatically every 30 min via scheduled background function.',
       }),
     };
   }

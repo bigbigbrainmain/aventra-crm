@@ -117,10 +117,10 @@ exports.handler = async (event) => {
   const limit = parseInt(params.limit || '3');
   const offset = parseInt(params.offset || '0');
 
-  const rows = await getRange(TABS.LEADS, 'A2:AA');
+  const rows = await getRange(TABS.LEADS, 'A2:AB');
   const targets = rows
     .map((row, i) => ({ lead: rowToLead(row, i + 2), rowNum: i + 2 }))
-    .filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:dirs-tried');
+    .filter(({ lead }) => lead.id && !lead.email && !lead.emailEnriched);
 
   const batch = targets.slice(offset, offset + limit);
   const remaining = Math.max(0, targets.length - offset - batch.length);

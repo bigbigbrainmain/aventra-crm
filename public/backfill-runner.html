@@ -214,13 +214,13 @@
     try {
       estimate = await callEndpoint({ pass: 'estimate' });
       dirsTotal = estimate.dirsQueueSize;
-      claudeTotal = estimate.claudeQueueSize;
-      resetTotal = estimate.allTriedQueueSize || 0;
+      claudeTotal = estimate.googleCseQueueSize || estimate.claudeQueueSize || 0;
+      resetTotal = 0;
       setBadge('badgeEstimate', 'done');
       document.getElementById('subEstimate').textContent =
-        `${dirsTotal} need dirs · ${claudeTotal} in Claude queue · ${resetTotal} to reset & retry · Max cost: $${estimate.estimatedClaudeCostUsd}`;
-      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Claude queue, ${resetTotal} all-tried to reset, max ~$${estimate.estimatedClaudeCostUsd}`);
-      setRemaining(resetTotal + dirsTotal + claudeTotal);
+        `${dirsTotal} need dirs · ${claudeTotal} in Google CSE queue · ${estimate.claudeAutoQueueSize || 0} queued for Claude AI (runs automatically)`;
+      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Google CSE queue, ${estimate.claudeAutoQueueSize || 0} for Claude AI auto-enrichment`);
+      setRemaining(dirsTotal + claudeTotal);
     } catch (e) {
       setBadge('badgeEstimate', 'error');
       log('Estimate failed: ' + e.message, 'err');
@@ -257,7 +257,7 @@
         log(`Reset complete. ${resetDone} leads requeued for Claude.`);
         try {
           const re = await callEndpoint({ pass: 'estimate' });
-          claudeTotal = re.claudeQueueSize;
+          claudeTotal = re.googleCseQueueSize || re.claudeQueueSize || 0;
           dirsTotal = re.dirsQueueSize;
         } catch { /* keep old counts */ }
       }
@@ -326,7 +326,7 @@
     // ── Claude pass ───────────────────────────────────────────────────────────
     try {
       const claudeEst = await callEndpoint({ pass: 'estimate' });
-      claudeTotal = claudeEst.claudeQueueSize;
+      claudeTotal = claudeEst.googleCseQueueSize || claudeEst.claudeQueueSize || 0;
     } catch { /* use existing claudeTotal */ }
 
     if (claudeTotal > 0) {
