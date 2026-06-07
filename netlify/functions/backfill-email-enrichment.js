@@ -206,7 +206,7 @@ async function runClaudeOnLead(lead) {
   const inputTokens = data.usage?.input_tokens || 0;
   const outputTokens = data.usage?.output_tokens || 0;
 
-  const text = data.content.find(c => c.type === 'text')?.text || '';
+  const text = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
   const match = /FOUND:\s*([^\s\n]+)/i.exec(text);
   const email = match ? match[1].toLowerCase().replace(/[.,;]$/, '') : null;
 
