@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aventra — Email Enrichment Backfill</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f3f4f6; display: flex; justify-content: center; padding: 40px 16px; }
+    .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; max-width: 620px; width: 100%; overflow: hidden; }
+    .header { background: #2563eb; padding: 24px 32px; }
+    .header h1 { color: white; font-size: 20px; margin-bottom: 4px; }
+    .header p { color: #bfdbfe; font-size: 14px; }
+    .body { padding: 32px; }
+
+    .stat-row { display: flex; gap: 12px; margin-bottom: 24px; }
+    .stat { flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; }
+    .stat .val { font-size: 28px; font-weight: 700; color: #111827; }
+    .stat .lbl { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .stat.green .val { color: #16a34a; }
+    .stat.blue .val { color: #2563eb; }
+    .stat.amber .val { color: #d97706; }
+
+    .phase { margin-bottom: 20px; }
+    .phase-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
+    .badge.pending  { background: #f3f4f6; color: #6b7280; }
+    .badge.running  { background: #dbeafe; color: #1d4ed8; }
+    .badge.done     { background: #dcfce7; color: #15803d; }
+    .badge.error    { background: #fee2e2; color: #dc2626; }
+    .phase-title { font-weight: 600; font-size: 15px; color: #111827; }
+    .phase-sub { font-size: 13px; color: #6b7280; }
+
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 6px; }
+    .progress-fill { height: 100%; background: #2563eb; border-radius: 3px; transition: width 0.4s; }
+
+    .log { background: #111827; color: #d1fae5; font-family: monospace; font-size: 12px; border-radius: 8px; padding: 16px; max-height: 200px; overflow-y: auto; margin-top: 16px; }
+    .log p { margin-bottom: 4px; opacity: 0.8; }
+    .log p:last-child { opacity: 1; }
+    .log .err { color: #fca5a5; }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 24px; }
+    button { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    #btn { background: #2563eb; color: white; }
+    #btn:hover { background: #1d4ed8; }
+    #btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    #cancelBtn { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; display: none; }
+    #cancelBtn:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+    .cost-note { font-size: 12px; color: #6b7280; text-align: center; margin-top: 12px; }
+    .done-banner { background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; text-align: center; margin-top: 20px; color: #15803d; font-weight: 600; display: none; }
+    .cancelled-banner { background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; text-align: center; margin-top: 20px; color: #92400e; font-weight: 600; display: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Email Enrichment Backfill</h1>
+    <p>Runs leads through directories then Claude (Sonnet) web search</p>
+  </div>
+  <div class="body">
+
+    <div class="stat-row">
+      <div class="stat green">
+        <div class="val" id="statFound">—</div>
+        <div class="lbl">Emails found</div>
+      </div>
+      <div class="stat">
+        <div class="val" id="statNotFound">—</div>
+        <div class="lbl">Not found</div>
+      </div>
+      <div class="stat blue">
+        <div class="val" id="statRemaining">—</div>
+        <div class="lbl">Remaining</div>
+      </div>
+      <div class="stat amber">
+        <div class="val" id="statCost">$0.00</div>
+        <div class="lbl">Claude cost</div>
+      </div>
+    </div>
+
+    <div class="phase" id="phaseEstimate">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeEstimate">Pending</span>
+        <span class="phase-title">Estimate</span>
+      </div>
+      <div class="phase-sub" id="subEstimate">Counting leads and projecting cost...</div>
+    </div>
+
+    <div class="phase" id="phaseReset">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeReset">Pending</span>
+        <span class="phase-title">Reset previously-tried leads</span>
+      </div>
+      <div class="phase-sub" id="subReset">Requeues email:all-tried leads so Claude can retry them with the new search</div>
+      <div class="progress-bar"><div class="progress-fill" id="progReset" style="width:0%"></div></div>
+    </div>
+
+    <div class="phase" id="phaseDirs">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeDirs">Pending</span>
+        <span class="phase-title">Pass 1 — UK Directories</span>
+      </div>
+      <div class="phase-sub" id="subDirs">192.com · Hotfrog · Cylex · FreeIndex · Thomson Local · Local.co.uk</div>
+      <div class="progress-bar"><div class="progress-fill" id="progDirs" style="width:0%"></div></div>
+    </div>
+
+    <div class="phase" id="phaseClaude">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeClaude">Pending</span>
+        <span class="phase-title">Pass 2 — Claude subagent</span>
+      </div>
+      <div class="phase-sub" id="subClaude">Autonomous web browsing for remaining leads</div>
+      <div class="progress-bar"><div class="progress-fill" id="progClaude" style="width:0%"></div></div>
+    </div>
+
+    <div class="log" id="log"><p>Press Start to begin.</p></div>
+
+    <div class="done-banner" id="doneBanner">All done! Check the leads sheet for newly found emails.</div>
+    <div class="cancelled-banner" id="cancelledBanner">Cancelled. Progress saved — click Start to resume where it left off.</div>
+
+    <div class="btn-row">
+      <button id="btn" onclick="startBackfill()">Start Backfill</button>
+      <button id="cancelBtn" onclick="cancelBackfill()">Cancel</button>
+    </div>
+    <div class="cost-note">Directories are free. Claude cost shown above updates in real time.</div>
+
+  </div>
+</div>
+
+<script>
+  const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
+  const DIRS_LIMIT = 3;
+  const CLAUDE_LIMIT = 1;
+  const RESET_LIMIT = 10;
+
+  let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
+  let dirsTotal = 0, claudeTotal = 0, resetTotal = 0;
+  let aborted = false;
+
+  function cancelBackfill() {
+    aborted = true;
+    document.getElementById('cancelBtn').textContent = 'Cancelling...';
+    document.getElementById('cancelBtn').disabled = true;
+  }
+
+  function log(msg, cls = '') {
+    const el = document.getElementById('log');
+    const p = document.createElement('p');
+    if (cls) p.className = cls;
+    p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(p);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setBadge(id, state) {
+    const el = document.getElementById(id);
+    el.className = 'badge ' + state;
+    el.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+  }
+
+  function updateStats() {
+    document.getElementById('statFound').textContent = totalFound;
+    document.getElementById('statNotFound').textContent = totalNotFound;
+    document.getElementById('statCost').textContent = '$' + totalCostUsd.toFixed(4);
+  }
+
+  function setRemaining(n) {
+    document.getElementById('statRemaining').textContent = n;
+  }
+
+  async function callEndpoint(params) {
+    const url = BASE + '?' + new URLSearchParams(params).toString();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function setRunning(running) {
+    document.getElementById('btn').disabled = running;
+    document.getElementById('btn').textContent = running ? 'Running…' : 'Start Backfill';
+    const cb = document.getElementById('cancelBtn');
+    cb.style.display = running ? 'block' : 'none';
+    cb.textContent = 'Cancel';
+    cb.disabled = false;
+  }
+
+  async function callEndpointWithRetry(params) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const url = BASE + '?' + new URLSearchParams(params).toString();
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+      if (res.status === 502 && attempt === 0) {
+        log(`Batch timed out, retrying with smaller batch...`, 'err');
+        params.limit = Math.max(1, Math.floor((params.limit || DIRS_LIMIT) / 2));
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+  }
+
+  async function startBackfill() {
+    aborted = false;
+    setRunning(true);
+    document.getElementById('doneBanner').style.display = 'none';
+    document.getElementById('cancelledBanner').style.display = 'none';
+    document.getElementById('log').innerHTML = '';
+    totalFound = 0; totalNotFound = 0; totalErrors = 0; totalCostUsd = 0;
+
+    // ── Estimate ─────────────────────────────────────────────────────────────
+    setBadge('badgeEstimate', 'running');
+    log('Fetching estimate...');
+    let estimate;
+    try {
+      estimate = await callEndpoint({ pass: 'estimate' });
+      dirsTotal = estimate.dirsQueueSize;
+      claudeTotal = estimate.claudeQueueSize;
+      resetTotal = estimate.allTriedQueueSize || 0;
+      setBadge('badgeEstimate', 'done');
+      document.getElementById('subEstimate').textContent =
+        `${dirsTotal} need dirs · ${claudeTotal} in Claude queue · ${resetTotal} to reset & retry · Max cost: $${estimate.estimatedClaudeCostUsd}`;
+      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Claude queue, ${resetTotal} all-tried to reset, max ~$${estimate.estimatedClaudeCostUsd}`);
+      setRemaining(resetTotal + dirsTotal + claudeTotal);
+    } catch (e) {
+      setBadge('badgeEstimate', 'error');
+      log('Estimate failed: ' + e.message, 'err');
+      document.getElementById('btn').disabled = false;
+      return;
+    }
+
+    // ── Reset pass: requeue email:all-tried → email:dirs-tried ───────────────
+    if (resetTotal > 0) {
+      setBadge('badgeReset', 'running');
+      log(`Resetting ${resetTotal} previously-tried leads for retry...`);
+      let offset = 0, resetDone = 0;
+      while (!aborted) {
+        let result;
+        try {
+          result = await callEndpoint({ pass: 'reset-all-tried', limit: RESET_LIMIT, offset });
+        } catch (e) {
+          log('Reset batch failed: ' + e.message, 'err');
+          break;
+        }
+        resetDone += result.reset || 0;
+        const pct = resetTotal > 0 ? Math.round((resetDone / resetTotal) * 100) : 100;
+        document.getElementById('progReset').style.width = pct + '%';
+        setRemaining(resetTotal - resetDone + dirsTotal + claudeTotal);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      setBadge('badgeReset', aborted ? 'pending' : 'done');
+      document.getElementById('subReset').textContent = aborted
+        ? `Paused after resetting ${resetDone} leads`
+        : `Reset ${resetDone} leads — they will now be retried by Claude`;
+      if (!aborted) {
+        log(`Reset complete. ${resetDone} leads requeued for Claude.`);
+        try {
+          const re = await callEndpoint({ pass: 'estimate' });
+          claudeTotal = re.claudeQueueSize;
+          dirsTotal = re.dirsQueueSize;
+        } catch { /* keep old counts */ }
+      }
+    } else {
+      setBadge('badgeReset', 'done');
+      document.getElementById('subReset').textContent = 'No previously-tried leads to reset';
+      log('No all-tried leads to reset.');
+    }
+
+    if (aborted) {
+      setRunning(false);
+      document.getElementById('btn').textContent = 'Resume';
+      document.getElementById('cancelledBanner').style.display = 'block';
+      log('Cancelled. Progress saved — click Resume to continue.');
+      return;
+    }
+
+    // ── Directories pass ─────────────────────────────────────────────────────
+    if (dirsTotal > 0) {
+      setBadge('badgeDirs', 'running');
+      log(`Starting directories pass (${dirsTotal} leads, ~${Math.ceil(dirsTotal / DIRS_LIMIT)} batches)...`);
+      let offset = 0, dirsProcessed = 0, limit = DIRS_LIMIT;
+      while (!aborted) {
+        let result;
+        try {
+          result = await callEndpointWithRetry({ pass: 'dirs', limit, offset });
+        } catch (e) {
+          log('Dirs batch failed after retry: ' + e.message + ' — skipping ahead', 'err');
+          offset += limit;
+          if (offset >= dirsTotal) break;
+          continue;
+        }
+        totalFound += result.found || 0;
+        totalNotFound += result.notFound || 0;
+        totalErrors += result.errors || 0;
+        dirsProcessed += result.total || 0;
+        updateStats();
+        const pct = dirsTotal > 0 ? Math.round((dirsProcessed / dirsTotal) * 100) : 100;
+        document.getElementById('progDirs').style.width = pct + '%';
+        setRemaining(result.remaining + claudeTotal);
+        log(`Dirs batch ${offset}–${offset + limit}: +${result.found} found, ${result.notFound} not found (${result.remaining} remaining)`);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        limit = DIRS_LIMIT; // reset in case retry halved it
+        await new Promise(r => setTimeout(r, 500));
+      }
+      setBadge('badgeDirs', aborted ? 'pending' : 'done');
+      document.getElementById('subDirs').textContent = aborted
+        ? `Paused at ${dirsProcessed} leads — click Start to resume`
+        : `Complete — found ${totalFound} emails from directories`;
+      if (!aborted) log('Directories pass complete.');
+    } else {
+      setBadge('badgeDirs', 'done');
+      document.getElementById('subDirs').textContent = 'No leads in this pass';
+      log('No email:not-found leads to process.');
+    }
+
+    if (aborted) {
+      setRunning(false);
+      document.getElementById('btn').textContent = 'Resume';
+      document.getElementById('cancelledBanner').style.display = 'block';
+      log('Cancelled. Progress saved — click Resume to continue.');
+      return;
+    }
+
+    // ── Claude pass ───────────────────────────────────────────────────────────
+    try {
+      const claudeEst = await callEndpoint({ pass: 'estimate' });
+      claudeTotal = claudeEst.claudeQueueSize;
+    } catch { /* use existing claudeTotal */ }
+
+    if (claudeTotal > 0) {
+      setBadge('badgeClaude', 'running');
+      log(`Starting Claude pass (${claudeTotal} leads, ~${Math.ceil(claudeTotal / CLAUDE_LIMIT)} batches)...`);
+      let offset = 0, claudeProcessed = 0, claudeFound = 0;
+      while (!aborted) {
+        let result;
+        try {
+          result = await callEndpoint({ pass: 'claude', limit: CLAUDE_LIMIT, offset });
+        } catch (e) {
+          if (e.message.includes('502')) {
+            log(`Lead at offset ${offset} timed out — skipping`, 'err');
+            offset++;
+            claudeProcessed++;
+            if (offset >= claudeTotal) break;
+            continue;
+          }
+          log('Claude batch error: ' + e.message, 'err');
+          break;
+        }
+        claudeFound += result.found || 0;
+        totalFound += result.found || 0;
+        totalNotFound += result.notFound || 0;
+        totalErrors += result.errors || 0;
+        totalCostUsd += result.estimatedCostUsd || 0;
+        claudeProcessed += result.total || 0;
+        updateStats();
+        const pct = claudeTotal > 0 ? Math.round((claudeProcessed / claudeTotal) * 100) : 100;
+        document.getElementById('progClaude').style.width = pct + '%';
+        setRemaining(result.remaining);
+        log(`Claude batch ${offset}–${offset + CLAUDE_LIMIT}: +${result.found} found, $${(result.estimatedCostUsd||0).toFixed(4)} (${result.remaining} remaining)`);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        await new Promise(r => setTimeout(r, 800));
+      }
+      setBadge('badgeClaude', aborted ? 'pending' : 'done');
+      document.getElementById('subClaude').textContent = aborted
+        ? `Paused — click Resume to continue`
+        : `Complete — found ${claudeFound} additional emails · Total Claude cost: $${totalCostUsd.toFixed(4)}`;
+      if (!aborted) log('Claude pass complete.');
+    } else {
+      setBadge('badgeClaude', 'done');
+      document.getElementById('subClaude').textContent = 'No leads to process';
+      log('No email:dirs-tried leads for Claude.');
+    }
+
+    if (aborted) {
+      setRunning(false);
+      document.getElementById('btn').textContent = 'Resume';
+      document.getElementById('cancelledBanner').style.display = 'block';
+      log('Cancelled. Progress saved — click Resume to continue.');
+      return;
+    }
+
+    setRemaining(0);
+    updateStats();
+    document.getElementById('doneBanner').style.display = 'block';
+    log(`All done. ${totalFound} emails found total. Claude cost: $${totalCostUsd.toFixed(4)}`);
+    setRunning(false);
+    document.getElementById('btn').textContent = 'Run Again';
+  }
+</script>
+</body>
+</html>
