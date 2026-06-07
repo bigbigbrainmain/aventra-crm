@@ -20,13 +20,11 @@
 
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
 
-// Haiku 4.5 pricing
-const PRICE_INPUT_PER_M = 0.80;
-const PRICE_OUTPUT_PER_M = 4.00;
-const AVG_INPUT_TOKENS_PER_LEAD = 3500;
-const AVG_OUTPUT_TOKENS_PER_LEAD = 250;
-
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// Sonnet 4.6 pricing
+const PRICE_INPUT_PER_M = 3.00;
+const PRICE_OUTPUT_PER_M = 15.00;
+const AVG_INPUT_TOKENS_PER_LEAD = 5000;
+const AVG_OUTPUT_TOKENS_PER_LEAD = 300;
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -77,6 +75,8 @@ function extractPhone(html) {
   return m ? m[1].trim() : null;
 }
 
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 async function fetchHtml(url, timeoutMs = 5000) {
   try {
     const res = await fetch(url, {
@@ -86,16 +86,6 @@ async function fetchHtml(url, timeoutMs = 5000) {
     if (res.ok) return await res.text();
   } catch { /* timeout */ }
   return null;
-}
-
-function stripHtml(html) {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
 }
 
 // ── Directory pass ────────────────────────────────────────────────────────────
@@ -168,24 +158,17 @@ async function runDirsOnLead(lead) {
 
 // ── Claude pass ───────────────────────────────────────────────────────────────
 
-const TOOLS = [
-  {
-    name: 'search_web',
-    description: 'Search the web. Returns page text from search results.',
-    input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
-  },
-  {
-    name: 'fetch_page',
-    description: 'Fetch and read the text content of a web page.',
-    input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
-  },
+// Anthropic server-side tools — executed on Anthropic's infrastructure, bypassing cloud IP blocks
+const CLAUDE_TOOLS = [
+  { type: 'web_search_20260209', name: 'web_search' },
+  { type: 'web_fetch_20260209', name: 'web_fetch' },
 ];
 
 const SYSTEM = `You find email addresses for UK small businesses.
 
 Given a business name, city, and optional website, search for their real contact email.
 
-Good sources: their website contact/about pages, yell.com, checkatrade.com, rated.people.com, trustatrader.com.
+Good sources: their website contact/about pages, yell.com, checkatrade.com, ratedpeople.com, trustatrader.com, google maps listing pages.
 
 When you find a valid email address, reply with exactly:
 FOUND: email@domain.com
@@ -194,85 +177,40 @@ If you cannot find one after searching, reply with exactly:
 NOT_FOUND
 
 Rules:
-- Max 3 tool calls total — be efficient
 - Skip noreply@, webmaster@, postmaster@ and platform emails (@wix.com, @squarespace.com)
 - Real business emails only`;
 
-async function doWebSearch(query) {
-  try {
-    const res = await fetch(`https://www.bing.com/search?q=${encodeURIComponent(query)}&mkt=en-GB&count=5`, {
-      headers: { 'User-Agent': UA, 'Accept-Language': 'en-GB,en;q=0.9' },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) return `Search returned ${res.status}`;
-    return stripHtml(await res.text()).substring(0, 3000);
-  } catch { return 'Search timed out'; }
-}
-
-async function doFetchPage(url) {
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) return `Page returned ${res.status}`;
-    return stripHtml(await res.text()).substring(0, 4000);
-  } catch { return 'Page fetch timed out'; }
-}
-
 async function runClaudeOnLead(lead) {
-  const messages = [{
-    role: 'user',
-    content: `Find the contact email for: "${lead.businessName}" in ${lead.city}, UK.${lead.website ? ` Website: ${lead.website}` : ''} Industry: ${lead.industry}.`,
-  }];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: SYSTEM,
+      tools: CLAUDE_TOOLS,
+      messages: [{
+        role: 'user',
+        content: `Find the contact email for: "${lead.businessName}" in ${lead.city}, UK.${lead.website ? ` Website: ${lead.website}` : ''} Industry: ${lead.industry}.`,
+      }],
+    }),
+  });
 
-  let inputTokens = 0;
-  let outputTokens = 0;
+  if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+  const data = await res.json();
 
-  for (let turn = 0; turn < 4; turn++) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        system: SYSTEM,
-        tools: TOOLS,
-        messages,
-      }),
-    });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    const data = await res.json();
-    inputTokens += data.usage?.input_tokens || 0;
-    outputTokens += data.usage?.output_tokens || 0;
-    messages.push({ role: 'assistant', content: data.content });
+  const inputTokens = data.usage?.input_tokens || 0;
+  const outputTokens = data.usage?.output_tokens || 0;
 
-    if (data.stop_reason === 'end_turn') {
-      const text = data.content.find(c => c.type === 'text')?.text || '';
-      const match = /FOUND:\s*([^\s\n]+)/i.exec(text);
-      const email = match ? match[1].toLowerCase().replace(/[.,;]$/, '') : null;
-      return { email: email && isValidEmail(email) ? email : null, inputTokens, outputTokens };
-    }
+  const text = data.content.find(c => c.type === 'text')?.text || '';
+  const match = /FOUND:\s*([^\s\n]+)/i.exec(text);
+  const email = match ? match[1].toLowerCase().replace(/[.,;]$/, '') : null;
 
-    if (data.stop_reason === 'tool_use') {
-      const results = [];
-      for (const block of data.content.filter(c => c.type === 'tool_use')) {
-        const content = block.name === 'search_web'
-          ? await doWebSearch(block.input.query)
-          : block.name === 'fetch_page'
-            ? await doFetchPage(block.input.url)
-            : 'Unknown tool';
-        results.push({ type: 'tool_result', tool_use_id: block.id, content });
-      }
-      messages.push({ role: 'user', content: results });
-    }
-  }
-
-  return { email: null, inputTokens, outputTokens };
+  return { email: email && isValidEmail(email) ? email : null, inputTokens, outputTokens };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -290,14 +228,12 @@ exports.handler = async (event) => {
   if (pass === 'estimate') {
     const dirsCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:not-found').length;
     const claudeCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:dirs-tried').length;
-    const totalForClaude = dirsCount + claudeCount; // dirs pass failures feed claude pass
+    const allTriedCount = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:all-tried').length;
+    const totalForClaude = dirsCount + claudeCount;
     const estimatedCost = parseFloat((
       (totalForClaude * AVG_INPUT_TOKENS_PER_LEAD / 1_000_000) * PRICE_INPUT_PER_M +
       (totalForClaude * AVG_OUTPUT_TOKENS_PER_LEAD / 1_000_000) * PRICE_OUTPUT_PER_M
     ).toFixed(2));
-
-    const dirsCallsNeeded = Math.ceil(dirsCount / 12);
-    const claudeCallsNeeded = Math.ceil(totalForClaude / 4);
 
     return {
       statusCode: 200,
@@ -305,10 +241,32 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         dirsQueueSize: dirsCount,
         claudeQueueSize: claudeCount,
+        allTriedQueueSize: allTriedCount,
         estimatedClaudeCostUsd: estimatedCost,
         estimatedClaudeCostGbp: parseFloat((estimatedCost * 0.79).toFixed(2)),
-        note: `Run dirs pass first (${dirsCallsNeeded} calls needed), then claude pass (~${claudeCallsNeeded} calls). Most dirs failures will also be claude failures — expect ~10-20% find rate on Claude.`,
       }),
+    };
+  }
+
+  // ── Reset pass: marks email:all-tried leads back to email:dirs-tried ─────────
+  if (pass === 'reset-all-tried') {
+    const targets = leads.filter(({ lead }) => lead.id && !lead.email && lead.priorityReason === 'email:all-tried');
+    const batch = targets.slice(offset, offset + limit);
+    const remaining = Math.max(0, targets.length - offset - batch.length);
+    let reset = 0;
+    for (const { lead, rowNum } of batch) {
+      try {
+        await updateCell(TABS.LEADS, `I${rowNum}`, 'email:dirs-tried');
+        reset++;
+        console.log(`[backfill-reset] reset ${lead.businessName}`);
+      } catch (err) {
+        console.error(`[backfill-reset] Error ${lead.businessName}:`, err.message);
+      }
+    }
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ pass: 'reset-all-tried', reset, total: batch.length, remaining, nextOffset: offset + batch.length }),
     };
   }
 

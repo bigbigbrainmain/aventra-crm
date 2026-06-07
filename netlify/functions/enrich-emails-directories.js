@@ -49,7 +49,7 @@ function extractPhone(html) {
   return m ? m[1].trim() : null;
 }
 
-async function fetchHtml(url, timeoutMs = 4000) {
+async function fetchHtml(url, timeoutMs = 6000) {
   try {
     const res = await fetch(url, {
       headers: {
@@ -140,7 +140,7 @@ async function enrichViaDirectories(lead) {
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
-  const limit = parseInt(params.limit || '5');
+  const limit = parseInt(params.limit || '4');
   const offset = parseInt(params.offset || '0');
 
   const rows = await getRange(TABS.LEADS, 'A2:AA');

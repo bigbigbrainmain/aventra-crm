@@ -55,7 +55,7 @@
 <div class="card">
   <div class="header">
     <h1>Email Enrichment Backfill</h1>
-    <p>Runs all existing <code>email:not-found</code> leads through directories then Claude</p>
+    <p>Runs leads through directories then Claude (Sonnet) web search</p>
   </div>
   <div class="body">
 
@@ -84,6 +84,15 @@
         <span class="phase-title">Estimate</span>
       </div>
       <div class="phase-sub" id="subEstimate">Counting leads and projecting cost...</div>
+    </div>
+
+    <div class="phase" id="phaseReset">
+      <div class="phase-header">
+        <span class="badge pending" id="badgeReset">Pending</span>
+        <span class="phase-title">Reset previously-tried leads</span>
+      </div>
+      <div class="phase-sub" id="subReset">Requeues email:all-tried leads so Claude can retry them with the new search</div>
+      <div class="progress-bar"><div class="progress-fill" id="progReset" style="width:0%"></div></div>
     </div>
 
     <div class="phase" id="phaseDirs">
@@ -122,9 +131,10 @@
   const BASE = 'https://aventra-crm.netlify.app/.netlify/functions/backfill-email-enrichment';
   const DIRS_LIMIT = 3;
   const CLAUDE_LIMIT = 1;
+  const RESET_LIMIT = 10;
 
   let totalFound = 0, totalNotFound = 0, totalErrors = 0, totalCostUsd = 0;
-  let dirsTotal = 0, claudeTotal = 0;
+  let dirsTotal = 0, claudeTotal = 0, resetTotal = 0;
   let aborted = false;
 
   function cancelBackfill() {
@@ -205,15 +215,63 @@
       estimate = await callEndpoint({ pass: 'estimate' });
       dirsTotal = estimate.dirsQueueSize;
       claudeTotal = estimate.claudeQueueSize;
+      resetTotal = estimate.allTriedQueueSize || 0;
       setBadge('badgeEstimate', 'done');
       document.getElementById('subEstimate').textContent =
-        `${dirsTotal} leads need directories · ${claudeTotal} already in Claude queue · Projected max cost: $${estimate.estimatedClaudeCostUsd}`;
-      log(`Estimate: ${dirsTotal} for dirs, ${claudeTotal} already in Claude queue, max ~$${estimate.estimatedClaudeCostUsd}`);
-      setRemaining(dirsTotal + claudeTotal);
+        `${dirsTotal} need dirs · ${claudeTotal} in Claude queue · ${resetTotal} to reset & retry · Max cost: $${estimate.estimatedClaudeCostUsd}`;
+      log(`Estimate: ${dirsTotal} dirs, ${claudeTotal} Claude queue, ${resetTotal} all-tried to reset, max ~$${estimate.estimatedClaudeCostUsd}`);
+      setRemaining(resetTotal + dirsTotal + claudeTotal);
     } catch (e) {
       setBadge('badgeEstimate', 'error');
       log('Estimate failed: ' + e.message, 'err');
       document.getElementById('btn').disabled = false;
+      return;
+    }
+
+    // ── Reset pass: requeue email:all-tried → email:dirs-tried ───────────────
+    if (resetTotal > 0) {
+      setBadge('badgeReset', 'running');
+      log(`Resetting ${resetTotal} previously-tried leads for retry...`);
+      let offset = 0, resetDone = 0;
+      while (!aborted) {
+        let result;
+        try {
+          result = await callEndpoint({ pass: 'reset-all-tried', limit: RESET_LIMIT, offset });
+        } catch (e) {
+          log('Reset batch failed: ' + e.message, 'err');
+          break;
+        }
+        resetDone += result.reset || 0;
+        const pct = resetTotal > 0 ? Math.round((resetDone / resetTotal) * 100) : 100;
+        document.getElementById('progReset').style.width = pct + '%';
+        setRemaining(resetTotal - resetDone + dirsTotal + claudeTotal);
+        if (result.remaining === 0) break;
+        offset = result.nextOffset;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      setBadge('badgeReset', aborted ? 'pending' : 'done');
+      document.getElementById('subReset').textContent = aborted
+        ? `Paused after resetting ${resetDone} leads`
+        : `Reset ${resetDone} leads — they will now be retried by Claude`;
+      if (!aborted) {
+        log(`Reset complete. ${resetDone} leads requeued for Claude.`);
+        try {
+          const re = await callEndpoint({ pass: 'estimate' });
+          claudeTotal = re.claudeQueueSize;
+          dirsTotal = re.dirsQueueSize;
+        } catch { /* keep old counts */ }
+      }
+    } else {
+      setBadge('badgeReset', 'done');
+      document.getElementById('subReset').textContent = 'No previously-tried leads to reset';
+      log('No all-tried leads to reset.');
+    }
+
+    if (aborted) {
+      setRunning(false);
+      document.getElementById('btn').textContent = 'Resume';
+      document.getElementById('cancelledBanner').style.display = 'block';
+      log('Cancelled. Progress saved — click Resume to continue.');
       return;
     }
 
