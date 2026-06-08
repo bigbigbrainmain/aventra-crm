@@ -1,4 +1,5 @@
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
+const dns = require('dns').promises;
 
 const EXCLUDED_DOMAINS = new Set([
   'example.com', 'sentry.io', 'wixpress.com', 'squarespace.com', 'wordpress.com',
@@ -23,6 +24,15 @@ function isValidEmail(email) {
   if (EXCLUDED_PREFIXES.has(prefix)) return false;
   if (/\.(png|jpg|gif|svg|webp)$/i.test(email)) return false;
   return true;
+}
+
+async function hasMxRecord(domain) {
+  try {
+    const records = await dns.resolveMx(domain);
+    return records && records.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 const SYSTEM = `You find email addresses for UK small businesses.
@@ -112,10 +122,17 @@ exports.handler = async (event) => {
     try {
       const result = await runClaudeOnLead(lead);
       if (result.email) {
-        await updateCell(TABS.LEADS, `E${rowNum}`, result.email);
-        await updateCell(TABS.LEADS, `I${rowNum}`, '');
-        stats.found++;
-        console.log(`[enrich-claude-bg] ✓ ${lead.businessName}: ${result.email}`);
+        const domain = result.email.split('@')[1];
+        const mxOk = await hasMxRecord(domain);
+        if (mxOk) {
+          await updateCell(TABS.LEADS, `E${rowNum}`, result.email);
+          await updateCell(TABS.LEADS, `I${rowNum}`, '');
+          stats.found++;
+          console.log(`[enrich-claude-bg] ✓ ${lead.businessName}: ${result.email}`);
+        } else {
+          stats.notFound++;
+          console.log(`[enrich-claude-bg] ✗ ${lead.businessName}: email found but domain has no MX (${result.email})`);
+        }
       } else {
         stats.notFound++;
         console.log(`[enrich-claude-bg] ✗ ${lead.businessName}: not found`);
