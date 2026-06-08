@@ -19,6 +19,14 @@
  */
 
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
+const dns = require('dns').promises;
+
+async function hasMxRecord(domain) {
+  try {
+    const records = await dns.resolveMx(domain);
+    return records && records.length > 0;
+  } catch { return false; }
+}
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -262,7 +270,8 @@ exports.handler = async (event) => {
     for (const { lead, rowNum } of batch) {
       try {
         const result = await runDirsOnLead(lead);
-        if (result) {
+        const mxOk = result ? await hasMxRecord(result.email.split('@')[1]) : false;
+        if (result && mxOk) {
           await updateCell(TABS.LEADS, `E${rowNum}`, result.email);
           await updateCell(TABS.LEADS, `I${rowNum}`, '');
           if (result.phone && !lead.phone) await updateCell(TABS.LEADS, `F${rowNum}`, result.phone);
@@ -271,6 +280,7 @@ exports.handler = async (event) => {
         } else {
           await updateCell(TABS.LEADS, `I${rowNum}`, 'email:dirs-tried');
           stats.notFound++;
+          if (result && !mxOk) console.log(`[backfill-dirs] ✗ ${lead.businessName}: email found but no MX record (${result.email})`);
         }
       } catch (err) {
         console.error(`[backfill-dirs] Error ${lead.businessName}:`, err.message);
@@ -302,7 +312,8 @@ exports.handler = async (event) => {
     for (const { lead, rowNum } of batch) {
       try {
         const email = await findEmailViaGoogle(lead);
-        if (email) {
+        const mxOk = email ? await hasMxRecord(email.split('@')[1]) : false;
+        if (email && mxOk) {
           await updateCell(TABS.LEADS, `E${rowNum}`, email);
           await updateCell(TABS.LEADS, `I${rowNum}`, '');
           stats.found++;

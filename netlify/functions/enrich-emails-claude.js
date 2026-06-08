@@ -1,4 +1,12 @@
 const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
+const dns = require('dns').promises;
+
+async function hasMxRecord(domain) {
+  try {
+    const records = await dns.resolveMx(domain);
+    return records && records.length > 0;
+  } catch { return false; }
+}
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -132,7 +140,8 @@ exports.handler = async (event) => {
   for (const { lead, rowNum } of batch) {
     try {
       const email = await findEmailViaGoogle(lead);
-      if (email) {
+      const mxOk = email ? await hasMxRecord(email.split('@')[1]) : false;
+      if (email && mxOk) {
         await updateCell(TABS.LEADS, `E${rowNum}`, email);
         await updateCell(TABS.LEADS, `I${rowNum}`, '');
         stats.found++;
