@@ -34,6 +34,7 @@ Rules:
 - Start with first name (infer from business name or omit) — no "Hi", no "Hey"
 - Body: 2-3 sentences MAX. Reference that you know they had a look ("saw you opened my last message"). Be warm and curious, not pushy.
 - Reiterate the free mockup offer
+- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks
@@ -49,6 +50,7 @@ Rules:
 - Start with first name (infer from business name or omit) — no "Hi", no "Hey"
 - Body: 2-3 sentences MAX. Casual, brief. Slightly different angle from first email.
 - Keep the low-pressure ask (free mockup)
+- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks

@@ -74,7 +74,7 @@ ${reviewLine || ''}
 Rules:
 - Subject: curiosity-driven, under 10 words, no exclamation marks
 - Start with first name (infer from business name or omit) — no "Hi", no "Hey"
-- Body: 3-4 sentences MAX. Casual, personal.
+- Body: 3 sentences MAX. Casual, personal.
 - Sentence 1: one SPECIFIC observation — site has a problem, no site missing searches, or great reviews but no web presence. Concrete, not generic filler.
 - Sentence 2: connect that to a real consequence (lost enquiries, competitors winning the search)
 - ${hasWebsite ? 'Angle: reference something specific you spotted that could help them get more local work' : 'Angle: they are missing enquiries from people searching online right now'}
@@ -84,6 +84,7 @@ ${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lea
   • "Would it be worth me putting together a few ideas and sending them over?"
   • "Happy to send over some ideas — no strings attached."
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school")
+- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks, NO marketing speak
