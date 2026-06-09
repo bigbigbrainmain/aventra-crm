@@ -13,9 +13,6 @@
   schedule = "*/30 7-18 * * 1-5"
   timeout = 26
 
-[functions."enrich-emails-claude-background"]
-  schedule = "*/30 7-18 * * 1-5"
-
 [functions."auto-followup"]
   schedule = "0 8,13 * * 1-5"
 
