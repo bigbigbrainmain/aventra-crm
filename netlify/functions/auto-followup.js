@@ -24,33 +24,39 @@ async function generateFollowUp(lead, type) {
   ].filter(Boolean).join('\n');
 
   const prompt = type === 'warm'
-    ? `Write a short follow-up email from Ollie at Aventra, a UK web design agency. This lead OPENED the previous email but hasn't replied — they've shown interest.
+    ? `Write a short follow-up email from Ollie at Aventra, a UK web design agency. This lead was emailed recently and hasn't replied yet.
 
 Lead details:
 ${context}
 
 Rules:
-- Subject: short, under 8 words, slightly more direct since they opened
-- Start with first name (infer from business name or omit) — no "Hi", no "Hey"
-- Body: 2-3 sentences MAX. Reference that you know they had a look ("saw you opened my last message"). Be warm and curious, not pushy.
+- Subject: short, under 8 words
+- Greeting: "Hi {first name}," using the Primary Contact name if provided, or a first name that is OBVIOUSLY part of the business name (e.g. "Dave's Plumbing" → "Hi Dave,"). Otherwise just "Hi," — NEVER guess a name.
+- Body: 2-3 sentences MAX. A casual nudge — "just floating this back to the top of your inbox" or similar. Warm and curious, not pushy.
+- NEVER mention email opens, tracking, or that you know whether they read the previous email
+- ONLY state facts from the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those.
+- Use UK English spelling throughout
 - Reiterate the free mockup offer
-- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
+- NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks
 
 Return ONLY valid JSON: {"subject": "...", "body": "..."}`
-    : `Write a short cold follow-up email from Ollie at Aventra, a UK web design agency. This lead was contacted before but hasn't opened or replied.
+    : `Write a short cold follow-up email from Ollie at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
 
 Lead details:
 ${context}
 
 Rules:
 - Subject: short, fresh angle — not "Following up" — under 8 words
-- Start with first name (infer from business name or omit) — no "Hi", no "Hey"
+- Greeting: "Hi {first name}," using the Primary Contact name if provided, or a first name that is OBVIOUSLY part of the business name (e.g. "Dave's Plumbing" → "Hi Dave,"). Otherwise just "Hi," — NEVER guess a name.
 - Body: 2-3 sentences MAX. Casual, brief. Slightly different angle from first email.
+- NEVER mention email opens, tracking, or that you know whether they read the previous email
+- ONLY state facts from the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those.
+- Use UK English spelling throughout
 - Keep the low-pressure ask (free mockup)
-- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
+- NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks

@@ -9,6 +9,14 @@ const HEADERS = {
 
 const FROM = process.env.OUTREACH_FROM || 'ollie@aventrasites.online';
 const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Ollie';
+const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+
+// Plus-addressed reply-to (e.g. ollie+lead_x1@domain) delivers to the FROM
+// mailbox while carrying the lead ID, so reply-webhook can match the lead.
+function replyToFor(leadId) {
+  const [local, domain] = FROM.split('@');
+  return `${local}+${leadId}@${domain}`;
+}
 
 async function findLead(leadId) {
   const rows = await getRange(TABS.LEADS, 'A2:W');
@@ -37,22 +45,30 @@ exports.handler = async (event) => {
     if (lead.outreachOptedOut === 'Yes') return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Lead has opted out' }) };
     if (!lead.subject || !lead.emailBody) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Generate an AI pitch first' }) };
 
-    const unsubUrl = `https://aventra-crm.netlify.app/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
+    const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
     const bodyHtml = lead.emailBody.replace(/\n/g, '<br>');
     const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="margin: 0 0 24px 0;">${bodyHtml}</p>
+<p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
+  --<br>
+  Ollie Eastham<br>
+  Aventra<br>
+  +44 7787 447731<br>
+  <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
+</p>
 <p style="font-size: 11px; color: #999; margin: 0;">
   <a href="${unsubUrl}" style="color: #999;">Unsubscribe</a>
 </p>
 </div>`;
 
-    const apiKey = process.env.RESEND_API_KEY || 're_BmJGYvCk_NRHFtQr2WAd3ZRfDsUvm1iFi';
+    const apiKey = process.env.RESEND_API_KEY;
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: `${FROM_NAME} <${FROM}>`,
         to: [lead.email],
+        reply_to: [replyToFor(leadId), 'joe@aventrasites.online'],
         subject: lead.subject,
         html,
         tags: [{ name: 'leadId', value: leadId }],
