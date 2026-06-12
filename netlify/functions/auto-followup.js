@@ -36,7 +36,7 @@ Rules:
 - NEVER mention email opens, tracking, or that you know whether they read the previous email
 - ONLY state facts from the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those.
 - Use UK English spelling throughout
-- Reiterate the free mockup offer
+- Reiterate the offer of a free example homepage (no commitment, they see it before deciding anything)
 - NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
@@ -55,7 +55,7 @@ Rules:
 - NEVER mention email opens, tracking, or that you know whether they read the previous email
 - ONLY state facts from the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those.
 - Use UK English spelling throughout
-- Keep the low-pressure ask (free mockup)
+- Keep the low-pressure ask (a free example homepage, no commitment)
 - NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"

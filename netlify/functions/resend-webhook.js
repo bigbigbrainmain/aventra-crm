@@ -1,4 +1,4 @@
-const { TABS, rowToLead, getRange, updateRange } = require('./_sheets');
+const { TABS, rowToLead, getRange, updateRange, updateCell } = require('./_sheets');
 
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 
@@ -78,6 +78,42 @@ async function handleOpened(data) {
   );
 }
 
+// Stop all future outreach to a lead and record why in their notes.
+// Uses the outreachOptedOut column (W) — every send/follow-up path
+// already filters on it.
+async function killOutreach(leadId, reason) {
+  if (!leadId) return;
+
+  const result = await findLead(leadId);
+  if (!result) return;
+
+  const { lead, rowNum } = result;
+  if (lead.outreachOptedOut === 'Yes') return;
+
+  await updateCell(TABS.LEADS, `W${rowNum}`, 'Yes');
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const note = `${reason} (${stamp}) — outreach stopped`;
+  await updateCell(TABS.LEADS, `L${rowNum}`, lead.notes ? `${lead.notes} | ${note}` : note);
+
+  console.log(`[resend-webhook] ${lead.businessName}: ${note}`);
+}
+
+async function handleBounced(data) {
+  // Only permanent bounces kill the lead — transient ones (mailbox full,
+  // greylisting) can recover on the next send.
+  const bounceType = data.bounce?.type || 'Undetermined';
+  if (bounceType === 'Transient') {
+    console.log(`[resend-webhook] Transient bounce for lead ${data.tags?.leadId} — not stopping outreach`);
+    return;
+  }
+  await killOutreach(data.tags?.leadId, `Email bounced (${bounceType.toLowerCase()})`);
+}
+
+async function handleComplained(data) {
+  await killOutreach(data.tags?.leadId, 'Recipient marked email as spam');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -89,6 +125,10 @@ exports.handler = async (event) => {
 
     if (payload.type === 'email.opened') {
       await handleOpened(payload.data);
+    } else if (payload.type === 'email.bounced') {
+      await handleBounced(payload.data);
+    } else if (payload.type === 'email.complained') {
+      await handleComplained(payload.data);
     }
 
     return { statusCode: 200, body: 'ok' };

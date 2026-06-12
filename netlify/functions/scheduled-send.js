@@ -48,6 +48,18 @@ exports.handler = async () => {
       try {
         if (!item.leadEmail) throw new Error('No email address on scheduled item');
 
+        // Re-check opt-out at send time — the lead may have unsubscribed or
+        // bounced since this email was queued.
+        const leadResult = await findLead(item.leadId);
+        if (leadResult && leadResult.lead.outreachOptedOut === 'Yes') {
+          await updateRow(TABS.SCHEDULED, item._row, [
+            item.id, item.leadId, item.businessName, item.subject,
+            item.body, item.sendAt, 'skipped', item.createdAt, 'Lead opted out', item.leadEmail,
+          ]);
+          console.log(`[scheduled-send] Skipped ${item.businessName} — opted out`);
+          continue;
+        }
+
         const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${item.leadId}`;
         const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="white-space: pre-wrap; margin: 0 0 24px 0;">${item.body}</p>
@@ -88,7 +100,6 @@ exports.handler = async () => {
         ]);
 
         // Update lead outreach columns (S=outreachSentAt, T=outreachCount, U=lastOutreachAt)
-        const leadResult = await findLead(item.leadId);
         if (leadResult) {
           const { lead, rowNum: leadRow } = leadResult;
           const isFirst = !lead.outreachSentAt;
