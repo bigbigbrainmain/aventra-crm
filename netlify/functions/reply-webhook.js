@@ -12,9 +12,10 @@ async function findLead(leadId) {
   return null;
 }
 
-// Extract leadId from reply+{leadId}@aventrasites.online
+// Extract leadId from any plus-addressed recipient, e.g.
+// ollie+{leadId}@aventrasites.online or reply+{leadId}@aventrasites.online
 function parseLeadId(toAddress) {
-  const match = String(toAddress || '').match(/reply\+([^@]+)@/);
+  const match = String(toAddress || '').match(/\+([^@+\s]+)@/);
   return match ? match[1] : null;
 }
 

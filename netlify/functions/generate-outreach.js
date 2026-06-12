@@ -46,8 +46,10 @@ ${context}
 
 Rules:
 - Subject line: short, references the previous email or just checking in — under 8 words, no exclamation marks
-- Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
+- Greeting: "Hi {first name}," using the Primary Contact name if provided, or a first name that is OBVIOUSLY part of the business name (e.g. "Dave's Plumbing" → "Hi Dave,"). Otherwise just "Hi," — NEVER guess a name and NEVER use the business name as a person's name.
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
+- ONLY state facts that appear in the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or the quality of their website — you have not checked any of those.
+- Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
 - End with the same low-pressure ask as before (free mockup, or happy to send ideas)
 - Close with "Best regards," on its own line before the sign-off
 - Do NOT include any sign-off or signature after "Best regards," — that is added separately
@@ -61,20 +63,21 @@ Lead details:
 ${context}
 
 Rules:
-- Subject line: curiosity-driven, no exclamation marks, not salesy, under 10 words
-- Start with just the contact's first name and a comma (e.g. "John,") — use the Primary Contact name if provided, otherwise infer a first name from the business name or omit — no "Hi", no "Hey"
+- Subject line: plain and specific, under 8 words — e.g. "website for ${lead.businessName}" or "your ${lead.industry || 'business'} reviews". Not salesy, no clickbait, no exclamation marks.
+- Greeting: "Hi {first name}," using the Primary Contact name if provided, or a first name that is OBVIOUSLY part of the business name (e.g. "Dave's Plumbing" → "Hi Dave,"). Otherwise just "Hi," — NEVER guess a name and NEVER use the business name as a person's name.
 - Body: 3-4 sentences MAX. Casual, personal, sounds like a real person not a marketer.
 - Reference their specific trade and city
-- Sentence 1: one SPECIFIC observation about their situation — e.g. their site has a problem, they have no site and are missing searches, or they have great reviews but no web presence. Be concrete, not generic filler.
-- Sentence 2: connect that observation to a real consequence (lost enquiries, competitors winning the search)
-- If they have no website: lead with missing enquiries from people searching online
-- If they have no website AND 20+ Google reviews: acknowledge their strong reputation first, then connect to why a website would reach even more people
-- If they have a website: reference something specific you spotted that could help them get more local work
-- If notes mention anything specific (e.g. SSL issue, bad site, spoke to them before), use that as the angle
+- ONLY state facts that appear in the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those and a false claim destroys trust instantly.
+- If they have no website: that IS the angle — people find them on Google but there's no site to look at, so enquiries drift to whoever has one. If they have 10+ reviews, acknowledge that strong reputation first.
+- If they have a website: say you came across the business while looking at ${lead.industry || 'trades'} in their area and offer to send over a couple of ideas — do NOT pretend you reviewed their site or spotted problems with it.
+- If notes mention something specific AND verified (e.g. SSL issue, spoke to them before), you may use that as the angle
+- Vary the opening between emails — do NOT start with "I noticed"
+- Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
 - End with ONE of these CTAs — vary them, never use the same one twice in a row:
   • "Happy to send over a free mockup if you'd like to see what it could look like?"
   • "Would it be worth me putting together a few ideas and sending them over?"
   • "Happy to send over some ideas — no strings attached."
+- After the CTA, add this exact final sentence: "And if you'd rather I didn't email again, just reply 'no thanks' — no hard feelings."
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school", "for your plumbing business")
 - Close with "Best regards," on its own line before the sign-off
 - Do NOT include any sign-off or signature after "Best regards," — that is added separately

@@ -72,19 +72,21 @@ Lead details:
 ${reviewLine || ''}
 
 Rules:
-- Subject: curiosity-driven, under 10 words, no exclamation marks
-- Start with first name (infer from business name or omit) — no "Hi", no "Hey"
+- Subject: plain and specific, under 8 words — e.g. "website for ${lead.businessName}" or "your ${lead.industry} reviews". No clickbait, no exclamation marks.
+- Greeting: "Hi {first name}," ONLY if a first name is obviously part of the business name (e.g. "Dave's Plumbing" → "Hi Dave,"). Otherwise just "Hi," — NEVER guess a name and NEVER use the business name as a person's name.
 - Body: 3 sentences MAX. Casual, personal.
-- Sentence 1: one SPECIFIC observation — site has a problem, no site missing searches, or great reviews but no web presence. Concrete, not generic filler.
-- Sentence 2: connect that to a real consequence (lost enquiries, competitors winning the search)
-- ${hasWebsite ? 'Angle: reference something specific you spotted that could help them get more local work' : 'Angle: they are missing enquiries from people searching online right now'}
-${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge their strong local reputation first, then connect to why a website would help even more people find them` : ''}
+- ONLY state facts from the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or problems with their website — you have not checked any of those and a false claim destroys trust instantly.
+- ${hasWebsite ? 'Angle: you came across the business while looking at local trades and would happily send over a couple of ideas — do NOT pretend you reviewed their site or spotted problems with it' : 'Angle: people find them on Google but there is no website to look at, so enquiries drift to whoever has one'}
+${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge that strong local reputation first, then connect to why a website would help even more people find them` : ''}
+- Vary the opening — do NOT start with "I noticed"
+- Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
 - End with ONE of these CTAs — vary them each time:
   • "Happy to send over a free mockup if you'd like to see what it could look like?"
   • "Would it be worth me putting together a few ideas and sending them over?"
   • "Happy to send over some ideas — no strings attached."
+- After the CTA, add this exact final sentence: "And if you'd rather I didn't email again, just reply 'no thanks' — no hard feelings."
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school")
-- NEVER use "We specialize in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
+- NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
 - Close with "Best regards," on its own line
 - Do NOT add sign-off after "Best regards,"
 - NO exclamation marks, NO marketing speak

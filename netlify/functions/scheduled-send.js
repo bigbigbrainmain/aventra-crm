@@ -6,6 +6,13 @@ const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 
 const TAB_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
+// Plus-addressed reply-to (e.g. ollie+lead_x1@domain) delivers to the FROM
+// mailbox while carrying the lead ID, so reply-webhook can match the lead.
+function replyToFor(leadId) {
+  const [local, domain] = FROM.split('@');
+  return `${local}+${leadId}@${domain}`;
+}
+
 async function findLead(leadId) {
   const rows = await getRange(TABS.LEADS, 'A2:W');
   for (let i = 0; i < rows.length; i++) {
@@ -47,7 +54,7 @@ exports.handler = async () => {
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
   Ollie Eastham<br>
-  Co-Founder &amp; CRO<br>
+  Aventra<br>
   +44 7787 447731<br>
   <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
 </p>
@@ -63,7 +70,7 @@ exports.handler = async () => {
           body: JSON.stringify({
             from: `${FROM_NAME} <${FROM}>`,
             to: [item.leadEmail],
-            reply_to: ['ollie@aventrasites.online', 'joe@aventrasites.online'],
+            reply_to: [replyToFor(item.leadId), 'joe@aventrasites.online'],
             subject: item.subject,
             html,
             tags: [{ name: 'leadId', value: item.leadId }],
