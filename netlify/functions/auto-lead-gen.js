@@ -81,9 +81,9 @@ ${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lea
 - Vary the opening — do NOT start with "I noticed"
 - Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
 - End with ONE of these CTAs — vary them each time:
-  • "Happy to send over a free mockup if you'd like to see what it could look like?"
-  • "Would it be worth me putting together a few ideas and sending them over?"
-  • "Happy to send over some ideas — no strings attached."
+  • "Happy to put together a free example homepage for your business, so you can see exactly how it could look before spending a penny — want me to?"
+  • "Would it be worth me building you a free example homepage, so you can see it before deciding anything?"
+  • "I could mock up a free example homepage for you — if you like it we can talk, and if not, no harm done."
 - After the CTA, add this exact final sentence: "And if you'd rather I didn't email again, just reply 'no thanks' — no hard feelings."
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school")
 - NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
