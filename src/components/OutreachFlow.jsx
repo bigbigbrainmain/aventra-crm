@@ -63,18 +63,21 @@ export default function OutreachFlow({ leads = [] }) {
     // Emailed breakdowns
     const emailedLeads    = leads.filter(l => l.email && l.outreachCount > 0);
     const opened          = emailedLeads.filter(l => validDate(l.emailOpenedAt)).length;
-    const notOpened       = Math.max(0, emailed - opened);
+    // Lost/Dropped must be a subset of emailed-but-not-opened so outgoing links from
+    // Emailed still sum to exactly `emailed` (d3-sankey inflates node value otherwise)
+    const LOST_STATUSES   = ['Lost', 'Qualified Out', 'NRTB', 'Incorrect Product Fit'];
+    const lost            = emailedLeads.filter(l => !validDate(l.emailOpenedAt) && LOST_STATUSES.includes(l.status)).length;
+    const notOpened       = Math.max(0, emailed - opened - lost);
 
     // Opened breakdowns
-    const replied         = leads.filter(l => l.status === 'Replied').length;
+    const replied         = emailedLeads.filter(l => l.status === 'Replied').length;
     const noReply         = Math.max(0, opened - replied);
     // Approximation: followed-up = leads that were emailed 2+ times and never replied
-    const followedUp      = leads.filter(l => l.outreachCount >= 2 && !validDate(l.emailOpenedAt) && l.status !== 'Replied').length;
+    const followedUp      = emailedLeads.filter(l => l.outreachCount >= 2 && !validDate(l.emailOpenedAt) && l.status !== 'Replied').length;
 
     // Outcomes
     const won             = leads.filter(l => l.status === 'Closed Won').length;
     const proposal        = leads.filter(l => l.status === 'Proposal Requested').length;
-    const lost            = leads.filter(l => ['Lost', 'Qualified Out', 'NRTB', 'Incorrect Product Fit'].includes(l.status)).length;
 
     const nodes = [
       // Col 0 — source
