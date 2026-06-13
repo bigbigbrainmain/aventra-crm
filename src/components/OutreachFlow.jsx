@@ -57,11 +57,11 @@ export default function OutreachFlow({ leads = [] }) {
 
     const withEmail  = leads.filter(l => l.email).length;
     const noEmail    = leads.length - withEmail;
-    const emailed    = leads.filter(l => l.outreachCount > 0).length;
+    const emailed    = leads.filter(l => l.email && l.outreachCount > 0).length;
     const backlog    = Math.max(0, withEmail - emailed);
 
     // Emailed breakdowns
-    const emailedLeads    = leads.filter(l => l.outreachCount > 0);
+    const emailedLeads    = leads.filter(l => l.email && l.outreachCount > 0);
     const opened          = emailedLeads.filter(l => validDate(l.emailOpenedAt)).length;
     const notOpened       = Math.max(0, emailed - opened);
 
