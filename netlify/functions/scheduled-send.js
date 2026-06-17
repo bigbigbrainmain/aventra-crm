@@ -30,9 +30,29 @@ exports.handler = async () => {
     const rows = await getRange(TABS.SCHEDULED, 'A2:J');
     const now = Date.now();
 
-    const due = rows
+    const allDue = rows
       .map((row, i) => rowToScheduled(row, i + 2))
       .filter(s => s.id && s.status === 'pending' && s.sendAt && new Date(s.sendAt).getTime() <= now);
+
+    // Deduplicate by leadId — auto-lead-gen can double-fire and create two rows per lead
+    const seenLeadIds = new Set();
+    const due = [];
+    const dupes = [];
+    for (const item of allDue) {
+      if (seenLeadIds.has(item.leadId)) {
+        dupes.push(item);
+      } else {
+        seenLeadIds.add(item.leadId);
+        due.push(item);
+      }
+    }
+    for (const dupe of dupes) {
+      await updateRow(TABS.SCHEDULED, dupe._row, [
+        dupe.id, dupe.leadId, dupe.businessName, dupe.subject,
+        dupe.body, dupe.sendAt, 'skipped', dupe.createdAt, 'Duplicate row', dupe.leadEmail,
+      ]).catch(() => {});
+      console.log(`[scheduled-send] Skipped duplicate row for ${dupe.businessName}`);
+    }
 
     if (due.length === 0) {
       console.log('[scheduled-send] No emails due');
