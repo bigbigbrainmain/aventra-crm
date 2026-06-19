@@ -81,8 +81,10 @@ exports.handler = async () => {
         }
 
         const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${item.leadId}`;
+        const bodyHtml = item.body.replace(/\n/g, '<br>');
+        const text = `${item.body}\n\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
         const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
-<p style="white-space: pre-wrap; margin: 0 0 24px 0;">${item.body}</p>
+<p style="margin: 0 0 24px 0;">${bodyHtml}</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
   Ollie Eastham<br>
@@ -105,6 +107,11 @@ exports.handler = async () => {
             reply_to: [replyToFor(item.leadId), 'joe@aventrasites.online'],
             subject: item.subject,
             html,
+            text,
+            headers: {
+              'List-Unsubscribe': `<${unsubUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
             tags: [{ name: 'leadId', value: item.leadId }],
           }),
         });
