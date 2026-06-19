@@ -73,11 +73,10 @@ Rules:
 - If notes mention something specific AND verified (e.g. SSL issue, spoke to them before), you may use that as the angle
 - Vary the opening between emails — do NOT start with "I noticed"
 - Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
-- End with ONE of these CTAs — vary them, never use the same one twice in a row:
-  • "Happy to put together a free example homepage for your business, so you can see exactly how it could look before spending a penny — want me to?"
-  • "Would it be worth me building you a free example homepage, so you can see it before deciding anything?"
-  • "I could mock up a free example homepage for you — if you like it we can talk, and if not, no harm done."
-- After the CTA, add this exact final sentence: "And if you'd rather I didn't email again, just reply 'no thanks' — no hard feelings."
+- End with ONE of these CTA sequences — vary them each time. Each is two parts: an offer sentence, then a blank line, then a short standalone closing question on its own line:
+  • "Happy to put together a free example homepage so you can see exactly what it could look like." [blank line] "Want me to send one over?"
+  • "I could mock up a free homepage for you — you'd see what it would look like before spending anything." [blank line] "Worth a look?"
+  • "Happy to put one together and send it over — you see it first, no commitment." [blank line] "Interested?"
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school", "for your plumbing business")
 - Close with "Best regards," on its own line before the sign-off
 - Do NOT include any sign-off or signature after "Best regards," — that is added separately
