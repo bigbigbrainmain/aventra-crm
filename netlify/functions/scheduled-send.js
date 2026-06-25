@@ -3,6 +3,7 @@ const { TABS, rowToLead, rowToScheduled, getRange, updateRow, updateRange, ensur
 const FROM = process.env.OUTREACH_FROM || 'ollie@aventrasites.online';
 const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Ollie';
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/joe-s-clacher/30min';
 
 const TAB_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
@@ -80,11 +81,29 @@ exports.handler = async () => {
           continue;
         }
 
+        // Idempotency guard: if this lead was emailed within the last 12h, a
+        // duplicate scheduled row (auto-lead-gen double-fire) or a prior run
+        // already sent this. Follow-ups are days apart (COLD_DELAY_DAYS=3) so
+        // a same-day send is always a duplicate — skip without double-sending
+        // or double-counting outreachCount.
+        if (leadResult && leadResult.lead.lastOutreachAt &&
+            (now - new Date(leadResult.lead.lastOutreachAt).getTime()) < 12 * 3600 * 1000) {
+          await updateRow(TABS.SCHEDULED, item._row, [
+            item.id, item.leadId, item.businessName, item.subject,
+            item.body, item.sendAt, 'skipped', item.createdAt, 'Already emailed today', item.leadEmail,
+          ]).catch(() => {});
+          console.log(`[scheduled-send] Skipped ${item.businessName} — already emailed in last 12h`);
+          continue;
+        }
+
         const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${item.leadId}`;
+        const cta = `If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: ${BOOKING_URL}`;
         const bodyHtml = item.body.replace(/\n/g, '<br>');
-        const text = `${item.body}\n\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
+        const text = `${item.body}\n\n${cta}\n\nBest regards,\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
         const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="margin: 0 0 24px 0;">${bodyHtml}</p>
+<p style="margin: 0 0 24px 0;">If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: <a href="${BOOKING_URL}" style="color: #2563eb;">${BOOKING_URL}</a></p>
+<p style="margin: 0 0 24px 0;">Best regards,</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
   Ollie Eastham<br>
@@ -100,7 +119,14 @@ exports.handler = async () => {
         const apiKey = process.env.RESEND_API_KEY;
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            // Final safety net for concurrent/double invocations: Resend dedupes
+            // identical keys for 24h, so two simultaneous runs that both pass the
+            // guard above still produce only one email to this lead.
+            'Idempotency-Key': `outreach-${item.leadId}`,
+          },
           body: JSON.stringify({
             from: `${FROM_NAME} <${FROM}>`,
             to: [item.leadEmail],

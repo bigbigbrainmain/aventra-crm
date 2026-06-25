@@ -80,14 +80,9 @@ Rules:
 ${lead.reviewCount > 10 ? `- They have ${lead.reviewCount} Google reviews (${lead.avgRating}★) — acknowledge that strong local reputation first, then connect to why a website would help even more people find them` : ''}
 - Vary the opening — do NOT start with "I noticed"
 - Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
-- End with ONE of these CTA sequences — vary them each time. Each is two parts: an offer sentence, then a blank line, then a short standalone closing question on its own line:
-  • "Happy to put together a free example homepage so you can see exactly what it could look like." [blank line] "Want me to send one over?"
-  • "I could mock up a free homepage for you — you'd see what it would look like before spending anything." [blank line] "Worth a look?"
-  • "Happy to put one together and send it over — you see it first, no commitment." [blank line] "Interested?"
+- Do NOT write any call-to-action, offer, booking link, or sign-off. End the body right after your last sentence of context. The offer of a free example homepage, a booking link, "Best regards," and the signature are all appended automatically after your text — if you add your own, they will appear twice.
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school")
 - NEVER use "We specialise in", "We've helped", "our team", "we work with", or any agency pitch language — write as one person reaching out, not a company selling
-- Close with "Best regards," on its own line
-- Do NOT add sign-off after "Best regards,"
 - NO exclamation marks, NO marketing speak
 
 Return ONLY valid JSON: {"subject": "...", "body": "..."}`;

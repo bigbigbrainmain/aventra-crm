@@ -50,9 +50,7 @@ Rules:
 - Body: 2-3 sentences MAX. Casual, brief, not pushy. Open with something like "just following up on my last email" or "wanted to check if my last message landed". Reference their business/trade specifically.
 - ONLY state facts that appear in the lead details above. NEVER claim anything about their Google rankings, search visibility, SEO, or the quality of their website — you have not checked any of those.
 - Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
-- End with the same low-pressure ask as before (the free example homepage)
-- Close with "Best regards," on its own line before the sign-off
-- Do NOT include any sign-off or signature after "Best regards," — that is added separately
+- Do NOT write any call-to-action, offer, booking link, or sign-off. End the body right after your last sentence. The free-homepage offer, a booking link, "Best regards," and the signature are all appended automatically after your text — if you add your own, they will appear twice.
 - NO marketing speak, NO exclamation marks, NO templates
 
 Return ONLY valid JSON in this exact format, nothing else:
@@ -73,13 +71,8 @@ Rules:
 - If notes mention something specific AND verified (e.g. SSL issue, spoke to them before), you may use that as the angle
 - Vary the opening between emails — do NOT start with "I noticed"
 - Use UK English spelling throughout (e.g. "specialise", "optimise", "colour")
-- End with ONE of these CTA sequences — vary them each time. Each is two parts: an offer sentence, then a blank line, then a short standalone closing question on its own line:
-  • "Happy to put together a free example homepage so you can see exactly what it could look like." [blank line] "Want me to send one over?"
-  • "I could mock up a free homepage for you — you'd see what it would look like before spending anything." [blank line] "Worth a look?"
-  • "Happy to put one together and send it over — you see it first, no commitment." [blank line] "Interested?"
+- Do NOT write any call-to-action, offer, booking link, or sign-off. End the body right after your last sentence of context. The free-homepage offer, a booking link, "Best regards," and the signature are all appended automatically after your text — if you add your own, they will appear twice.
 - NEVER say "for your practice" — use their actual trade (e.g. "for your grooming business", "for your driving school", "for your plumbing business")
-- Close with "Best regards," on its own line before the sign-off
-- Do NOT include any sign-off or signature after "Best regards," — that is added separately
 - NO unsubscribe links, NO marketing speak, NO exclamation marks
 
 Return ONLY valid JSON in this exact format, nothing else:

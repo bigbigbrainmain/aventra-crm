@@ -10,6 +10,7 @@ const HEADERS = {
 const FROM = process.env.OUTREACH_FROM || 'ollie@aventrasites.online';
 const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Ollie';
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/joe-s-clacher/30min';
 
 // Plus-addressed reply-to (e.g. ollie+lead_x1@domain) delivers to the FROM
 // mailbox while carrying the lead ID, so reply-webhook can match the lead.
@@ -46,10 +47,13 @@ exports.handler = async (event) => {
     if (!lead.subject || !lead.emailBody) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Generate an AI pitch first' }) };
 
     const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
+    const cta = `If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: ${BOOKING_URL}`;
     const bodyHtml = lead.emailBody.replace(/\n/g, '<br>');
-    const text = `${lead.emailBody}\n\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
+    const text = `${lead.emailBody}\n\n${cta}\n\nBest regards,\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
     const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="margin: 0 0 24px 0;">${bodyHtml}</p>
+<p style="margin: 0 0 24px 0;">If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: <a href="${BOOKING_URL}" style="color: #2563eb;">${BOOKING_URL}</a></p>
+<p style="margin: 0 0 24px 0;">Best regards,</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
   Ollie Eastham<br>
@@ -65,7 +69,11 @@ exports.handler = async (event) => {
     const apiKey = process.env.RESEND_API_KEY;
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': `outreach-${leadId}`,
+      },
       body: JSON.stringify({
         from: `${FROM_NAME} <${FROM}>`,
         to: [lead.email],
