@@ -190,6 +190,10 @@ exports.handler = async () => {
       const d = new Date();
       if (d.getHours() >= 16) d.setDate(d.getDate() + 1);
       d.setHours(9 + Math.floor(Math.random() * 7), Math.floor(Math.random() * 60), 0, 0);
+      // Skip weekends — B2B cold sends land far better on weekdays
+      const day = d.getDay();
+      if (day === 6) d.setDate(d.getDate() + 2);       // Sat -> Mon
+      else if (day === 0) d.setDate(d.getDate() + 1);  // Sun -> Mon
       return d.toISOString();
     }
     const now = new Date().toISOString();
