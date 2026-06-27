@@ -85,7 +85,9 @@ exports.handler = async (event) => {
           'List-Unsubscribe': `<${unsubUrl}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
-        tags: [{ name: 'leadId', value: leadId }],
+        // Resend tag values allow only [a-zA-Z0-9_-]; some legacy leadIds
+        // contain '=', so sanitise (the real leadId still drives reply_to).
+        tags: [{ name: 'leadId', value: leadId.replace(/[^a-zA-Z0-9_-]/g, '_') }],
       }),
     });
 
