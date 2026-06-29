@@ -1,4 +1,4 @@
-const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId, isGenericInbox } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
@@ -24,7 +24,7 @@ async function generateFollowUp(lead, type) {
   ].filter(Boolean).join('\n');
 
   const prompt = type === 'warm'
-    ? `Write a short follow-up email from Ollie at Aventra, a UK web design agency. This lead was emailed recently and hasn't replied yet.
+    ? `Write a short follow-up email from Joe at Aventra, a UK web design agency. This lead was emailed recently and hasn't replied yet.
 
 Lead details:
 ${context}
@@ -41,7 +41,7 @@ Rules:
 - NO exclamation marks
 
 Return ONLY valid JSON: {"subject": "...", "body": "..."}`
-    : `Write a short cold follow-up email from Ollie at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
+    : `Write a short cold follow-up email from Joe at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
 
 Lead details:
 ${context}
@@ -133,7 +133,7 @@ exports.handler = async () => {
         .map(s => s.leadId)
     );
 
-    const leads = leadRows.map((row, i) => rowToLead(row, i + 2)).filter(l => l.id && l.email);
+    const leads = leadRows.map((row, i) => rowToLead(row, i + 2)).filter(l => l.id && l.email && !isGenericInbox(l.email));
 
     const eligible = leads.filter(l =>
       !DEAD_STATUSES.has(l.status) &&

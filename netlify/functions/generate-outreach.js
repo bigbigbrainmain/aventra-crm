@@ -39,7 +39,7 @@ async function generatePitch(lead) {
   ].filter(Boolean).join('\n');
 
   const prompt = isFollowUp
-    ? `Write a short follow-up email from Ollie at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
+    ? `Write a short follow-up email from Joe at Aventra, a UK web design agency. This lead was contacted before but hasn't replied.
 
 Lead details:
 ${context}
@@ -55,7 +55,7 @@ Rules:
 
 Return ONLY valid JSON in this exact format, nothing else:
 {"subject": "...", "body": "..."}`
-    : `Write a short cold outreach email from Ollie at Aventra, a UK web design agency.
+    : `Write a short cold outreach email from Joe at Aventra, a UK web design agency.
 
 Lead details:
 ${context}

@@ -1,4 +1,4 @@
-const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId, isGenericInbox } = require('./_sheets');
 
 const HEADERS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
@@ -23,7 +23,7 @@ exports.handler = async (event) => {
     const ready = leadRows
       .map((row, i) => rowToLead(row, i + 2))
       .filter(l =>
-        l.id && l.email && l.subject && l.emailBody &&
+        l.id && l.email && !isGenericInbox(l.email) && l.subject && l.emailBody &&
         l.outreachCount === 0 &&
         !DEAD_STATUSES.has(l.status) &&
         l.outreachOptedOut !== 'Yes' &&

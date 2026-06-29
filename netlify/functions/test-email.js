@@ -21,9 +21,9 @@ Best regards,`;
 <p style="white-space: pre-wrap; margin: 0 0 24px 0;">${sampleBody}</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
-  Ollie Eastham<br>
-  Co-Founder &amp; CRO<br>
-  +44 7787 447731<br>
+  Joe Clacher<br>
+  Aventra<br>
+  07710 988 228<br>
   <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
 </p>
 <p style="font-size: 11px; color: #999; margin: 0;">
@@ -35,9 +35,9 @@ Best regards,`;
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'Ollie <ollie@aventrasites.online>',
+      from: 'Joe Clacher <joe@aventrasites.online>',
       to: ['joe@aventrasites.online'],
-      reply_to: ['ollie@aventrasites.online', 'joe@aventrasites.online'],
+      reply_to: ['joe@aventrasites.online'],
       subject: 'Getting more plumbing jobs in Leeds',
       html,
     }),

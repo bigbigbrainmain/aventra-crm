@@ -242,6 +242,27 @@ function genId(prefix) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
+// Generic shared-inbox local-parts we never cold-email — they reach a
+// reception desk rather than a decision-maker and skew towards larger orgs
+// (e.g. info@puregym.com). Matches the exact prefix plus dotted/dashed
+// branch variants like info.leeds@ or info-leeds@. Add prefixes here
+// (e.g. 'sales', 'enquiries') to widen the filter.
+const GENERIC_INBOX_PREFIXES = new Set(['info']);
+
+function isGenericInbox(email) {
+  if (!email || !String(email).includes('@')) return false;
+  const prefix = String(email).toLowerCase().split('@')[0] || '';
+  const root = prefix.split(/[.\-+]/)[0];
+  return GENERIC_INBOX_PREFIXES.has(root);
+}
+
+// Resend tag values allow only [a-zA-Z0-9_-]; some legacy leadIds contain '='
+// etc. Sends write this sanitised form as the tag, so the webhook must match
+// leads by comparing this same sanitised form (not the raw ID).
+function leadIdTag(leadId) {
+  return String(leadId).replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
 async function ensureTab(tabName, headers) {
   const sheets = getClient();
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
@@ -287,4 +308,6 @@ module.exports = {
   updateRange,
   ensureTab,
   genId,
+  isGenericInbox,
+  leadIdTag,
 };
