@@ -1,4 +1,4 @@
-const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab, isGenericInbox } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
 
@@ -37,7 +37,7 @@ const EMAIL_NOISE = ['noreply', 'no-reply', '@example', '.png', '.jpg', '.svg', 
 
 function extractEmail(html) {
   const matches = html.match(EMAIL_RE) || [];
-  return matches.find(e => !EMAIL_NOISE.some(n => e.includes(n))) || null;
+  return matches.find(e => !EMAIL_NOISE.some(n => e.includes(n)) && !isGenericInbox(e)) || null;
 }
 
 async function scrapeEmail(website) {
@@ -62,7 +62,7 @@ async function generatePitch(lead) {
     ? `- Google Reviews: ${lead.reviewCount} reviews, ${lead.avgRating}★ average`
     : null;
 
-  const prompt = `Write a short cold outreach email from Ollie at Aventra, a UK web design agency.
+  const prompt = `Write a short cold outreach email from Joe at Aventra, a UK web design agency.
 
 Lead details:
 - Business name: ${lead.businessName}
@@ -177,6 +177,7 @@ exports.handler = async () => {
       .filter(l =>
         l.id &&
         l.email &&
+        !isGenericInbox(l.email) &&
         l.outreachCount === 0 &&
         !DEAD_STATUSES.has(l.status) &&
         l.outreachOptedOut !== 'Yes' &&
@@ -232,8 +233,10 @@ exports.handler = async () => {
         if (!used.has(key)) { used.add(key); combos.push({ industry, city }); }
       }
 
+      // Gather all candidates across the combos first, then scrape until the
+      // remaining slots are filled with leads that have a usable email.
+      const candidates = [];
       for (const { industry, city } of combos) {
-        if (newLeads.length >= remainingSlots) break;
         console.log(`[auto-lead-gen] Searching: ${industry} in ${city}`);
         try {
           const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
@@ -248,10 +251,9 @@ exports.handler = async () => {
           if (!placesRes.ok) continue;
           const placesData = await placesRes.json();
           for (const place of (placesData.places || [])) {
-            if (newLeads.length >= remainingSlots) break;
             const name = place.displayName?.text || '';
             if (!name || existingNames.has(name.toLowerCase().trim())) continue;
-            newLeads.push({
+            candidates.push({
               id: genId('L'),
               businessName: name,
               industry,
@@ -269,32 +271,45 @@ exports.handler = async () => {
         }
       }
 
-      for (const lead of newLeads) {
+      // Bound how many we scrape so a run of email-less candidates can't run
+      // the function for minutes — we still backfill duds, just not forever.
+      const maxScrapes = remainingSlots * 4;
+      let scrapeAttempts = 0;
+      for (const lead of candidates) {
+        if (newLeads.length >= remainingSlots) break;
+        if (scrapeAttempts >= maxScrapes) {
+          console.log(`[auto-lead-gen] Hit scrape cap (${maxScrapes}) — stopping with ${newLeads.length}/${remainingSlots} new leads`);
+          break;
+        }
+        scrapeAttempts++;
         try {
-          if (lead.website) {
-            lead.email = (await scrapeEmail(lead.website)) || '';
+          // scrapeEmail already skips generic info@ inboxes — a null result
+          // means no usable email, so drop the business entirely: it is never
+          // written to the sheet and never consumes a slot.
+          const email = lead.website ? await scrapeEmail(lead.website) : null;
+          if (!email) {
+            console.log(`[auto-lead-gen] Skipped ${lead.businessName} — no usable email`);
+            continue;
           }
+          lead.email = email;
 
           await appendRow(TABS.LEADS, [
             lead.id, lead.businessName, lead.industry, lead.city,
             lead.email, lead.phone, lead.website,
-            '', lead.email ? '' : 'email:not-found', 'New', '', '', '', '', 'No', 'FALSE',
+            '', '', 'New', '', '', '', '', 'No', 'FALSE',
             '', '', '', '', '', '', '', '',
             lead.reviewCount || 0, lead.avgRating || 0, 'auto',
           ]);
 
-          if (lead.email) {
-            const pitch = await generatePitch(lead);
-            const schedId = genId('sched');
-            await appendRow(TABS.SCHEDULED, [
-              schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-              randomSendTime(), 'pending', now, '', lead.email,
-            ]);
-            scheduledCount++;
-            console.log(`[auto-lead-gen] New lead scheduled: ${lead.businessName} (${lead.email})`);
-          } else {
-            console.log(`[auto-lead-gen] New lead added (no email): ${lead.businessName}`);
-          }
+          const pitch = await generatePitch(lead);
+          const schedId = genId('sched');
+          await appendRow(TABS.SCHEDULED, [
+            schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
+            randomSendTime(), 'pending', now, '', lead.email,
+          ]);
+          newLeads.push(lead);
+          scheduledCount++;
+          console.log(`[auto-lead-gen] New lead scheduled: ${lead.businessName} (${lead.email})`);
         } catch (err) {
           console.error(`[auto-lead-gen] Failed for ${lead.businessName}:`, err.message);
         }

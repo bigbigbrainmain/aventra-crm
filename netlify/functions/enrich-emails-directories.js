@@ -1,4 +1,4 @@
-const { TABS, rowToLead, getRange, updateCell } = require('./_sheets');
+const { TABS, rowToLead, getRange, updateCell, isGenericInbox } = require('./_sheets');
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -24,6 +24,7 @@ function isValidEmail(email) {
   if (EXCLUDED_DOMAINS.has(domain)) return false;
   if ([...EXCLUDED_DOMAINS].some(d => domain.endsWith('.' + d))) return false;
   if (EXCLUDED_PREFIXES.has(prefix)) return false;
+  if (isGenericInbox(email)) return false;
   if (/\.(png|jpg|gif|svg|webp)$/i.test(email)) return false;
   return true;
 }

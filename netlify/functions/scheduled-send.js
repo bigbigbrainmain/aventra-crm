@@ -1,7 +1,7 @@
-const { TABS, rowToLead, rowToScheduled, getRange, updateRow, updateRange, ensureTab } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, updateRow, updateRange, ensureTab, isGenericInbox, leadIdTag } = require('./_sheets');
 
-const FROM = process.env.OUTREACH_FROM || 'ollie@aventrasites.online';
-const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Ollie';
+const FROM = process.env.OUTREACH_FROM || 'joe@aventrasites.online';
+const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Joe Clacher';
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/joe-s-clacher/30min';
 
@@ -81,6 +81,17 @@ exports.handler = async () => {
           continue;
         }
 
+        // Skip generic shared inboxes (info@ etc.) that may have been queued
+        // before the filter existed — they reach a reception desk, not a buyer.
+        if (isGenericInbox(item.leadEmail)) {
+          await updateRow(TABS.SCHEDULED, item._row, [
+            item.id, item.leadId, item.businessName, item.subject,
+            item.body, item.sendAt, 'skipped', item.createdAt, 'Generic inbox (info@)', item.leadEmail,
+          ]).catch(() => {});
+          console.log(`[scheduled-send] Skipped ${item.businessName} — generic inbox ${item.leadEmail}`);
+          continue;
+        }
+
         // Idempotency guard: if this lead was emailed within the last 12h, a
         // duplicate scheduled row (auto-lead-gen double-fire) or a prior run
         // already sent this. Follow-ups are days apart (COLD_DELAY_DAYS=3) so
@@ -99,16 +110,16 @@ exports.handler = async () => {
         const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${item.leadId}`;
         const cta = `If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: ${BOOKING_URL}`;
         const bodyHtml = item.body.replace(/\n/g, '<br>');
-        const text = `${item.body}\n\n${cta}\n\nBest regards,\n--\nOllie Eastham\nAventra\n+44 7787 447731\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
+        const text = `${item.body}\n\n${cta}\n\nBest regards,\n--\nJoe Clacher\nAventra\n07710 988 228\naventrasites.online\n\nTo unsubscribe: ${unsubUrl}`;
         const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
 <p style="margin: 0 0 24px 0;">${bodyHtml}</p>
 <p style="margin: 0 0 24px 0;">If it'd be useful, I'd happily put together a free example homepage for your business so you can see exactly what it could look like — no commitment at all. Easiest is to grab a quick slot here: <a href="${BOOKING_URL}" style="color: #2563eb;">${BOOKING_URL}</a></p>
 <p style="margin: 0 0 24px 0;">Best regards,</p>
 <p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
   --<br>
-  Ollie Eastham<br>
+  Joe Clacher<br>
   Aventra<br>
-  +44 7787 447731<br>
+  07710 988 228<br>
   <a href="https://aventrasites.online" style="color: #555; text-decoration: none;">aventrasites.online</a>
 </p>
 <p style="font-size: 11px; color: #999; margin: 0;">
@@ -138,9 +149,9 @@ exports.handler = async () => {
               'List-Unsubscribe': `<${unsubUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             },
-            // Resend tag values allow only [a-zA-Z0-9_-]; some legacy leadIds
-            // contain '=', so sanitise (the real leadId still drives reply_to).
-            tags: [{ name: 'leadId', value: item.leadId.replace(/[^a-zA-Z0-9_-]/g, '_') }],
+            // Sanitised so Resend accepts the tag and the webhook can match it
+            // back to the lead (the real leadId still drives reply_to).
+            tags: [{ name: 'leadId', value: leadIdTag(item.leadId) }],
           }),
         });
 
