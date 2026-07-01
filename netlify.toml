@@ -8,6 +8,7 @@
 
 [functions."auto-lead-gen"]
   schedule = "0 7,12 * * 1-5"
+  timeout = 26
 
 [functions."enrich-emails-directories"]
   schedule = "*/30 7-18 * * 1-5"
@@ -15,6 +16,7 @@
 
 [functions."auto-followup"]
   schedule = "0 8,13 * * 1-5"
+  timeout = 26
 
 [functions."scheduled-send"]
   schedule = "0 * * * *"

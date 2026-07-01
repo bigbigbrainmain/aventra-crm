@@ -1,16 +1,36 @@
 const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId, isGenericInbox } = require('./_sheets');
 
-const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
+const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email', 'Type'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
-const MAX_FOLLOWUPS = parseInt(process.env.FOLLOWUP_PER_RUN || '5');
+// Per-DAY target for follow-ups (not per-run). Both daily runs top the day's
+// tally up toward this number. Unlike new outreach, follow-ups are capped by
+// how many leads are genuinely due (contacted, 3+ days ago, no reply) — on a
+// thin day we send fewer, and the pool refills as new sends age into it.
+// FOLLOWUP_DAILY_TARGET is canonical; FOLLOWUP_PER_RUN is read for back-compat.
+const DAILY_TARGET = parseInt(process.env.FOLLOWUP_DAILY_TARGET || process.env.FOLLOWUP_PER_RUN || '20');
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const PITCH_CONCURRENCY = 4; // parallel Anthropic follow-up generations
 
 function daysSince(iso) {
   if (!iso) return 0;
   return Math.floor((Date.now() - new Date(iso)) / 86400000);
+}
+
+// Run up to `limit` async tasks at a time, preserving result order.
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
 
 async function generateFollowUp(lead, type) {
@@ -122,16 +142,29 @@ exports.handler = async () => {
 
     const [leadRows, schedRows] = await Promise.all([
       getRange(TABS.LEADS, 'A2:X'),
-      getRange(TABS.SCHEDULED, 'A2:J'),
+      getRange(TABS.SCHEDULED, 'A2:K'),
     ]);
+    const scheduled = schedRows.map((r, i) => rowToScheduled(r, i + 2));
 
     // IDs of leads that already have a pending scheduled email — skip these
     const alreadyPending = new Set(
-      schedRows
-        .map(r => rowToScheduled(r, 0))
-        .filter(s => s.status === 'pending')
-        .map(s => s.leadId)
+      scheduled.filter(s => s.status === 'pending').map(s => s.leadId)
     );
+
+    // Per-day top-up: only schedule the shortfall toward DAILY_TARGET, counting
+    // follow-ups already queued today across earlier runs.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const scheduledFollowupToday = scheduled.filter(s =>
+      s.type === 'followup' &&
+      s.createdAt.slice(0, 10) === todayStr &&
+      s.status !== 'skipped' && s.status !== 'failed'
+    ).length;
+    const target = Math.max(0, DAILY_TARGET - scheduledFollowupToday);
+
+    if (target === 0) {
+      console.log(`[auto-followup] Daily target ${DAILY_TARGET} already met (${scheduledFollowupToday} queued today)`);
+      return { statusCode: 200, body: JSON.stringify({ scheduled: 0, dayTotal: scheduledFollowupToday, target: DAILY_TARGET }) };
+    }
 
     const leads = leadRows.map((row, i) => rowToLead(row, i + 2)).filter(l => l.id && l.email && !isGenericInbox(l.email));
 
@@ -158,11 +191,11 @@ exports.handler = async () => {
       daysSince(l.lastOutreachAt) >= COLD_DELAY_DAYS
     );
 
-    console.log(`[auto-followup] warm: ${warmPool.length}, cold: ${coldPool.length}`);
+    console.log(`[auto-followup] target ${target} (already ${scheduledFollowupToday}/${DAILY_TARGET} today) · warm: ${warmPool.length}, cold: ${coldPool.length}`);
 
     if (warmPool.length === 0 && coldPool.length === 0) {
-      console.log('[auto-followup] No follow-up candidates');
-      return { statusCode: 200, body: JSON.stringify({ scheduled: 0 }) };
+      console.log('[auto-followup] No follow-up candidates due');
+      return { statusCode: 200, body: JSON.stringify({ scheduled: 0, dayTotal: scheduledFollowupToday, target: DAILY_TARGET }) };
     }
 
     // Spread sends randomly between 9am–5pm tomorrow
@@ -178,45 +211,35 @@ exports.handler = async () => {
     }
     const now = new Date().toISOString();
 
+    // Warm first (higher value), then cold — take only up to the day's
+    // shortfall. Follow-ups can't be manufactured: if fewer than `target` are
+    // due, we schedule whatever exists.
+    const queue = [
+      ...warmPool.map(lead => ({ lead, type: 'warm' })),
+      ...coldPool.map(lead => ({ lead, type: 'cold' })),
+    ].slice(0, target);
+
     const warmSucceeded = [];
     const coldSucceeded = [];
-    let total = 0;
 
-    // Process warm first (higher value)
-    for (const lead of warmPool) {
-      if (total >= MAX_FOLLOWUPS) break;
-      try {
-        const pitch = await generateFollowUp(lead, 'warm');
-        const schedId = genId('sched');
-        await appendRow(TABS.SCHEDULED, [
-          schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-          randomSendTime(), 'pending', now, '', lead.email,
-        ]);
-        warmSucceeded.push(lead.businessName);
-        total++;
-        console.log(`[auto-followup] Warm follow-up scheduled: ${lead.businessName}`);
-      } catch (err) {
-        console.error(`[auto-followup] Failed for ${lead.businessName}:`, err.message);
-      }
-    }
+    // Generate the follow-up copy in parallel, then append in priority order.
+    const pitched = await mapLimit(queue, PITCH_CONCURRENCY, async ({ lead, type }) => {
+      try { return { lead, type, pitch: await generateFollowUp(lead, type) }; }
+      catch (err) { console.error(`[auto-followup] Failed for ${lead.businessName}:`, err.message); return null; }
+    });
 
-    // Then cold
-    for (const lead of coldPool) {
-      if (total >= MAX_FOLLOWUPS) break;
-      try {
-        const pitch = await generateFollowUp(lead, 'cold');
-        const schedId = genId('sched');
-        await appendRow(TABS.SCHEDULED, [
-          schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-          randomSendTime(), 'pending', now, '', lead.email,
-        ]);
-        coldSucceeded.push(lead.businessName);
-        total++;
-        console.log(`[auto-followup] Cold follow-up scheduled: ${lead.businessName}`);
-      } catch (err) {
-        console.error(`[auto-followup] Failed for ${lead.businessName}:`, err.message);
-      }
+    for (const p of pitched) {
+      if (!p) continue;
+      const { lead, type, pitch } = p;
+      const schedId = genId('sched');
+      await appendRow(TABS.SCHEDULED, [
+        schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
+        randomSendTime(), 'pending', now, '', lead.email, 'followup',
+      ]);
+      (type === 'warm' ? warmSucceeded : coldSucceeded).push(lead.businessName);
+      console.log(`[auto-followup] ${type} follow-up scheduled: ${lead.businessName}`);
     }
+    const total = warmSucceeded.length + coldSucceeded.length;
 
     if (total > 0) {
       await sendSummaryEmail(coldSucceeded, warmSucceeded).catch(err =>
@@ -224,7 +247,7 @@ exports.handler = async () => {
       );
     }
 
-    return { statusCode: 200, body: JSON.stringify({ scheduled: total, warm: warmSucceeded.length, cold: coldSucceeded.length }) };
+    return { statusCode: 200, body: JSON.stringify({ scheduled: total, warm: warmSucceeded.length, cold: coldSucceeded.length, dayTotal: scheduledFollowupToday + total, target: DAILY_TARGET }) };
   } catch (err) {
     console.error('[auto-followup] Fatal:', err);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };

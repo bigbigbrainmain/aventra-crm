@@ -138,7 +138,11 @@ function rowToCustomerAddon(row, rowNum) {
 }
 
 // Scheduled Outreach columns: A(0)=ID, B(1)=LeadID, C(2)=BusinessName, D(3)=Subject,
-// E(4)=Body, F(5)=SendAt, G(6)=Status, H(7)=CreatedAt, I(8)=Error, J(9)=LeadEmail
+// E(4)=Body, F(5)=SendAt, G(6)=Status, H(7)=CreatedAt, I(8)=Error, J(9)=LeadEmail,
+// K(10)=Type ('new' | 'followup'; blank on legacy/manual rows). Type lets the
+// daily-target counters distinguish first-touch sends from follow-ups even
+// after a row's status/outreachCount has changed. Read A2:K to populate it;
+// callers that read A2:J (e.g. scheduled-send) simply get type ''.
 function rowToScheduled(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -151,6 +155,7 @@ function rowToScheduled(row, rowNum) {
     createdAt: String(row[7] || ''),
     error: String(row[8] || ''),
     leadEmail: String(row[9] || ''),
+    type: String(row[10] || ''),
     _row: rowNum,
   };
 }

@@ -1,6 +1,6 @@
 const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab, isGenericInbox } = require('./_sheets');
 
-const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];
+const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email', 'Type'];
 
 const INDUSTRIES = [
   'plumber', 'electrician', 'builder', 'roofer', 'painter decorator',
@@ -25,12 +25,36 @@ const CITIES = [
   'Cheltenham', 'Northampton', 'Ipswich', 'Norwich', 'Cambridge',
 ];
 
-const MAX_LEADS = parseInt(process.env.OUTREACH_PER_RUN || '5');
-const COMBOS_PER_RUN = 4;
+// Per-DAY target for new cold emails (not per-run). The two daily runs
+// (07:00, 12:00) each top the day's tally up toward this number, so the noon
+// run backfills whatever the morning run fell short of. OUTREACH_DAILY_TARGET
+// is the canonical name; OUTREACH_PER_RUN is still read for back-compat.
+const DAILY_TARGET = parseInt(process.env.OUTREACH_DAILY_TARGET || process.env.OUTREACH_PER_RUN || '20');
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
 
+// Effort ceilings so "chase the target" can't run the function past Netlify's
+// 26s wall-clock limit or hammer Places forever on a thin day.
+const TIME_BUDGET_MS = 22000;    // leave headroom under the 26s function timeout
+const MAX_COMBOS = 30;           // distinct industry×city searches per run
+const SCRAPE_CONCURRENCY = 6;    // parallel homepage scrapes
+const PITCH_CONCURRENCY = 4;     // parallel Anthropic pitch generations
+
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// Run up to `limit` async tasks at a time, preserving result order.
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
 
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 const EMAIL_NOISE = ['noreply', 'no-reply', '@example', '.png', '.jpg', '.svg', '@sentry', '@w3', 'schema.org'];
@@ -106,7 +130,46 @@ Return ONLY valid JSON: {"subject": "...", "body": "..."}`;
   return JSON.parse(text);
 }
 
-async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount) {
+// Search one industry×city on Google Places and return new-name candidates,
+// deduped against `existingNames` (which is mutated to include the hits so the
+// same business is never returned twice within a run).
+async function placesSearch({ industry, city }, googleKey, existingNames) {
+  const out = [];
+  try {
+    const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': googleKey,
+        'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
+      },
+      body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
+    });
+    if (!placesRes.ok) return out;
+    const placesData = await placesRes.json();
+    for (const place of (placesData.places || [])) {
+      const name = place.displayName?.text || '';
+      if (!name || existingNames.has(name.toLowerCase().trim())) continue;
+      existingNames.add(name.toLowerCase().trim());
+      out.push({
+        id: genId('L'),
+        businessName: name,
+        industry,
+        city,
+        phone: place.nationalPhoneNumber || '',
+        website: place.websiteUri || '',
+        email: '',
+        reviewCount: place.userRatingCount || 0,
+        avgRating: place.rating || 0,
+      });
+    }
+  } catch (err) {
+    console.error(`[auto-lead-gen] Places error for ${industry}/${city}:`, err.message);
+  }
+  return out;
+}
+
+async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount, dayTotal, target) {
   const apiKey = process.env.RESEND_API_KEY;
   const total = backlogLeads.length + newLeads.length;
   if (!apiKey || total === 0) return;
@@ -131,6 +194,9 @@ async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount) {
       <p style="font-size: 15px; color: #0F0F0F; margin-top: 0;">
         <strong>${backlogLeads.length}</strong> from backlog · <strong>${newLeads.length}</strong> new leads · <strong>${scheduledCount}</strong> emails scheduled
       </p>
+      <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px;">
+        ${dayTotal}/${target} new emails queued today${dayTotal < target ? ` — ${target - dayTotal} short (backlog + findable emails ran low)` : ' ✓ target met'}
+      </p>
       ${backlogSection}
       ${newSection}
       <a href="${APP_URL}/leads" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; font-size: 14px; border-radius: 8px; display: inline-block;">View Leads →</a>
@@ -150,26 +216,42 @@ async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount) {
 }
 
 exports.handler = async () => {
+  const startTime = Date.now();
+  const timeLeft = () => Date.now() - startTime < TIME_BUDGET_MS;
   try {
     const googleKey = process.env.GOOGLE_API_KEY;
     if (!googleKey) { console.log('[auto-lead-gen] No GOOGLE_API_KEY'); return { statusCode: 200, body: 'skipped' }; }
 
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    // Read lead data and scheduled queue together
+    // Read lead data and scheduled queue together (A2:K to see the Type column)
     const [existingRows, schedRows] = await Promise.all([
       getRange(TABS.LEADS, 'A2:Z'),
-      getRange(TABS.SCHEDULED, 'A2:J'),
+      getRange(TABS.SCHEDULED, 'A2:K'),
     ]);
     const existingNames = new Set(existingRows.map(r => String(r[1] || '').toLowerCase().trim()));
+    const scheduled = schedRows.map((r, i) => rowToScheduled(r, i + 2));
 
     // Skip leads that already have a pending email queued
     const alreadyPending = new Set(
-      schedRows
-        .map(r => rowToScheduled(r, 0))
-        .filter(s => s.status === 'pending')
-        .map(s => s.leadId)
+      scheduled.filter(s => s.status === 'pending').map(s => s.leadId)
     );
+
+    // Per-day top-up: count new emails already queued today (across earlier
+    // runs), then only schedule the shortfall toward DAILY_TARGET. sent/pending
+    // count; skipped/failed don't, so those slots get refilled.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const scheduledNewToday = scheduled.filter(s =>
+      s.type === 'new' &&
+      s.createdAt.slice(0, 10) === todayStr &&
+      s.status !== 'skipped' && s.status !== 'failed'
+    ).length;
+    const target = Math.max(0, DAILY_TARGET - scheduledNewToday);
+
+    if (target === 0) {
+      console.log(`[auto-lead-gen] Daily target ${DAILY_TARGET} already met (${scheduledNewToday} queued today) — nothing to do`);
+      return { statusCode: 200, body: JSON.stringify({ scheduled: 0, dayTotal: scheduledNewToday, target: DAILY_TARGET }) };
+    }
 
     // Backlog: leads with email found, never contacted, not dead/opted-out, not already queued
     const backlog = existingRows
@@ -185,7 +267,7 @@ exports.handler = async () => {
         !alreadyPending.has(l.id)
       );
 
-    console.log(`[auto-lead-gen] Backlog: ${backlog.length} uncontacted leads with emails`);
+    console.log(`[auto-lead-gen] Target ${target} (already ${scheduledNewToday}/${DAILY_TARGET} today) · backlog ${backlog.length}`);
 
     function randomSendTime() {
       const d = new Date();
@@ -198,101 +280,74 @@ exports.handler = async () => {
       return d.toISOString();
     }
     const now = new Date().toISOString();
-    let scheduledCount = 0;
     const backlogScheduled = [];
 
-    // Process backlog first, up to MAX_LEADS
-    for (const lead of backlog) {
-      if (scheduledCount >= MAX_LEADS) break;
-      try {
-        const pitch = await generatePitch(lead);
+    // Phase 1 — backlog (leads already have emails, so just need a pitch each).
+    // Generate pitches in parallel, then append up to the target.
+    if (backlog.length && timeLeft()) {
+      const picks = backlog.slice(0, target);
+      const pitched = await mapLimit(picks, PITCH_CONCURRENCY, async (lead) => {
+        try { return { lead, pitch: await generatePitch(lead) }; }
+        catch (err) { console.error(`[auto-lead-gen] Backlog pitch failed for ${lead.businessName}:`, err.message); return null; }
+      });
+      for (const p of pitched) {
+        if (!p || backlogScheduled.length >= target) continue;
         const schedId = genId('sched');
         await appendRow(TABS.SCHEDULED, [
-          schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-          randomSendTime(), 'pending', now, '', lead.email,
+          schedId, p.lead.id, p.lead.businessName, p.pitch.subject, p.pitch.body,
+          randomSendTime(), 'pending', now, '', p.lead.email, 'new',
         ]);
-        backlogScheduled.push(lead);
-        scheduledCount++;
-        console.log(`[auto-lead-gen] Backlog scheduled: ${lead.businessName} (${lead.email})`);
-      } catch (err) {
-        console.error(`[auto-lead-gen] Backlog failed for ${lead.businessName}:`, err.message);
+        backlogScheduled.push(p.lead);
+        console.log(`[auto-lead-gen] Backlog scheduled: ${p.lead.businessName} (${p.lead.email})`);
       }
     }
 
-    // Fill remaining slots with new leads from Google Places
-    const remainingSlots = MAX_LEADS - scheduledCount;
-    const newLeads = [];
+    // Phase 2 — fill the remaining slots with fresh leads from Google Places.
+    // Keep searching new industry×city combos and scraping their sites (in
+    // parallel) until the shortfall is filled, or the combo/time ceiling hits.
+    const remainingSlots = target - backlogScheduled.length;
+    const newLeads = [];   // leads with a usable email found this run
 
     if (remainingSlots > 0) {
-      const used = new Set();
-      const combos = [];
-      while (combos.length < COMBOS_PER_RUN) {
-        const industry = pick(INDUSTRIES);
-        const city = pick(CITIES);
-        const key = `${industry}|${city}`;
-        if (!used.has(key)) { used.add(key); combos.push({ industry, city }); }
-      }
+      const usedCombos = new Set();
+      while (newLeads.length < remainingSlots && usedCombos.size < MAX_COMBOS && timeLeft()) {
+        // Pick a fresh combo not yet searched this run
+        let combo, guard = 0;
+        do { combo = { industry: pick(INDUSTRIES), city: pick(CITIES) }; guard++; }
+        while (usedCombos.has(`${combo.industry}|${combo.city}`) && guard < 50);
+        usedCombos.add(`${combo.industry}|${combo.city}`);
 
-      // Gather all candidates across the combos first, then scrape until the
-      // remaining slots are filled with leads that have a usable email.
-      const candidates = [];
-      for (const { industry, city } of combos) {
-        console.log(`[auto-lead-gen] Searching: ${industry} in ${city}`);
-        try {
-          const placesRes = await fetch('https://places.googleapis.com/v1/places:searchText', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Goog-Api-Key': googleKey,
-              'X-Goog-FieldMask': 'places.displayName,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount',
-            },
-            body: JSON.stringify({ textQuery: `${industry} in ${city}`, maxResultCount: 20 }),
-          });
-          if (!placesRes.ok) continue;
-          const placesData = await placesRes.json();
-          for (const place of (placesData.places || [])) {
-            const name = place.displayName?.text || '';
-            if (!name || existingNames.has(name.toLowerCase().trim())) continue;
-            candidates.push({
-              id: genId('L'),
-              businessName: name,
-              industry,
-              city,
-              phone: place.nationalPhoneNumber || '',
-              website: place.websiteUri || '',
-              email: '',
-              reviewCount: place.userRatingCount || 0,
-              avgRating: place.rating || 0,
-            });
-            existingNames.add(name.toLowerCase().trim());
+        console.log(`[auto-lead-gen] Searching: ${combo.industry} in ${combo.city}`);
+        const candidates = await placesSearch(combo, googleKey, existingNames);
+
+        // Scrape this combo's candidates in parallel batches, harvesting emails
+        for (let b = 0; b < candidates.length && newLeads.length < remainingSlots && timeLeft(); b += SCRAPE_CONCURRENCY) {
+          const batch = candidates.slice(b, b + SCRAPE_CONCURRENCY);
+          const emails = await mapLimit(batch, SCRAPE_CONCURRENCY, (c) => c.website ? scrapeEmail(c.website) : Promise.resolve(null));
+          for (let k = 0; k < batch.length && newLeads.length < remainingSlots; k++) {
+            if (!emails[k]) continue;   // no usable email → drop the business
+            batch[k].email = emails[k];
+            newLeads.push(batch[k]);
           }
-        } catch (err) {
-          console.error(`[auto-lead-gen] Places error for ${industry}/${city}:`, err.message);
         }
       }
+      if (newLeads.length < remainingSlots) {
+        console.log(`[auto-lead-gen] Stopped at ${newLeads.length}/${remainingSlots} new leads (combos ${usedCombos.size}/${MAX_COMBOS}, ${timeLeft() ? 'combos exhausted' : 'time budget hit'})`);
+      }
+    }
 
-      // Bound how many we scrape so a run of email-less candidates can't run
-      // the function for minutes — we still backfill duds, just not forever.
-      const maxScrapes = remainingSlots * 4;
-      let scrapeAttempts = 0;
-      for (const lead of candidates) {
-        if (newLeads.length >= remainingSlots) break;
-        if (scrapeAttempts >= maxScrapes) {
-          console.log(`[auto-lead-gen] Hit scrape cap (${maxScrapes}) — stopping with ${newLeads.length}/${remainingSlots} new leads`);
-          break;
-        }
-        scrapeAttempts++;
+    // Phase 3 — write the new leads: pitches in parallel, then append the
+    // Leads + Scheduled rows for the ones that generated cleanly.
+    const newScheduled = [];
+    if (newLeads.length) {
+      const pitched = await mapLimit(newLeads, PITCH_CONCURRENCY, async (lead) => {
+        try { return { lead, pitch: await generatePitch(lead) }; }
+        catch (err) { console.error(`[auto-lead-gen] Pitch failed for ${lead.businessName}:`, err.message); return null; }
+      });
+      for (const p of pitched) {
+        if (!p) continue;
+        const { lead, pitch } = p;
         try {
-          // scrapeEmail already skips generic info@ inboxes — a null result
-          // means no usable email, so drop the business entirely: it is never
-          // written to the sheet and never consumes a slot.
-          const email = lead.website ? await scrapeEmail(lead.website) : null;
-          if (!email) {
-            console.log(`[auto-lead-gen] Skipped ${lead.businessName} — no usable email`);
-            continue;
-          }
-          lead.email = email;
-
           await appendRow(TABS.LEADS, [
             lead.id, lead.businessName, lead.industry, lead.city,
             lead.email, lead.phone, lead.website,
@@ -300,29 +355,28 @@ exports.handler = async () => {
             '', '', '', '', '', '', '', '',
             lead.reviewCount || 0, lead.avgRating || 0, 'auto',
           ]);
-
-          const pitch = await generatePitch(lead);
           const schedId = genId('sched');
           await appendRow(TABS.SCHEDULED, [
             schedId, lead.id, lead.businessName, pitch.subject, pitch.body,
-            randomSendTime(), 'pending', now, '', lead.email,
+            randomSendTime(), 'pending', now, '', lead.email, 'new',
           ]);
-          newLeads.push(lead);
-          scheduledCount++;
+          newScheduled.push(lead);
           console.log(`[auto-lead-gen] New lead scheduled: ${lead.businessName} (${lead.email})`);
         } catch (err) {
-          console.error(`[auto-lead-gen] Failed for ${lead.businessName}:`, err.message);
+          console.error(`[auto-lead-gen] Failed to write ${lead.businessName}:`, err.message);
         }
       }
-    } else {
-      console.log(`[auto-lead-gen] Backlog filled all ${MAX_LEADS} slots — skipping new lead search`);
     }
 
-    await sendSummaryEmail(backlogScheduled, newLeads, scheduledCount).catch(err =>
+    const scheduledCount = backlogScheduled.length + newScheduled.length;
+    const dayTotal = scheduledNewToday + scheduledCount;
+    console.log(`[auto-lead-gen] Done — scheduled ${scheduledCount} this run, ${dayTotal}/${DAILY_TARGET} today`);
+
+    await sendSummaryEmail(backlogScheduled, newScheduled, scheduledCount, dayTotal, DAILY_TARGET).catch(err =>
       console.error('[auto-lead-gen] Summary email failed:', err)
     );
 
-    return { statusCode: 200, body: JSON.stringify({ backlog: backlogScheduled.length, added: newLeads.length, scheduled: scheduledCount }) };
+    return { statusCode: 200, body: JSON.stringify({ backlog: backlogScheduled.length, added: newScheduled.length, scheduled: scheduledCount, dayTotal, target: DAILY_TARGET }) };
   } catch (err) {
     console.error('[auto-lead-gen] Fatal:', err);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
