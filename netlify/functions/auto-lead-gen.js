@@ -35,9 +35,11 @@ const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'I
 
 // Effort ceilings so "chase the target" can't run the function past Netlify's
 // 26s wall-clock limit or hammer Places forever on a thin day.
-const TIME_BUDGET_MS = 22000;    // leave headroom under the 26s function timeout
+// Ceiling on the search+scrape phase. Kept below the 26s function timeout with
+// ~9s reserved for the pitch-generation + sheet-write phase that follows.
+const TIME_BUDGET_MS = 17000;
 const MAX_COMBOS = 30;           // distinct industry×city searches per run
-const SCRAPE_CONCURRENCY = 6;    // parallel homepage scrapes
+const SCRAPE_CONCURRENCY = 12;   // sites scraped in parallel (each site also fetches its pages in parallel)
 const PITCH_CONCURRENCY = 4;     // parallel Anthropic pitch generations
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -64,20 +66,27 @@ function extractEmail(html) {
   return matches.find(e => !EMAIL_NOISE.some(n => e.includes(n)) && !isGenericInbox(e)) || null;
 }
 
+const SCRAPE_PATHS = ['', '/contact', '/contact-us', '/about'];
+const SCRAPE_TIMEOUT_MS = 4000;
+
+// Fetch the homepage + contact pages CONCURRENTLY rather than one-by-one. The
+// old sequential version spent up to 4×5s on every email-less site, so a
+// single slow site could eat the whole run's time budget. Now a site resolves
+// in ~one timeout; we return the first email found, preferring earlier paths
+// (homepage before /about).
 async function scrapeEmail(website) {
   const base = website.startsWith('http') ? website.replace(/\/$/, '') : `https://${website.replace(/\/$/, '')}`;
-  for (const path of ['', '/contact', '/contact-us', '/about']) {
+  const found = await Promise.all(SCRAPE_PATHS.map(async (path) => {
     try {
       const res = await fetch(base + path, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(SCRAPE_TIMEOUT_MS),
       });
-      if (!res.ok) continue;
-      const email = extractEmail(await res.text());
-      if (email) return email;
-    } catch { /* continue */ }
-  }
-  return null;
+      if (!res.ok) return null;
+      return extractEmail(await res.text());
+    } catch { return null; }
+  }));
+  return found.find(Boolean) || null;
 }
 
 async function generatePitch(lead) {
