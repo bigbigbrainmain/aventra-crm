@@ -196,15 +196,12 @@ async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount, dayTotal
     </ul>` : '';
 
   const html = `<div style="font-family: Arial, sans-serif; max-width: 560px;">
-    <div style="background: #2563eb; padding: 24px 32px;">
-      <h1 style="color: white; margin: 0; font-size: 20px;">Auto lead gen: ${scheduledCount} emails scheduled</h1>
+    <div style="background: #16a34a; padding: 24px 32px;">
+      <h1 style="color: white; margin: 0; font-size: 20px;">✓ Daily target hit: ${dayTotal} new emails queued today</h1>
     </div>
     <div style="background: #f9f9f9; padding: 32px; border: 1px solid #e5e7eb;">
       <p style="font-size: 15px; color: #0F0F0F; margin-top: 0;">
-        <strong>${backlogLeads.length}</strong> from backlog · <strong>${newLeads.length}</strong> new leads · <strong>${scheduledCount}</strong> emails scheduled
-      </p>
-      <p style="font-size: 13px; color: #6b7280; margin: 0 0 16px;">
-        ${dayTotal}/${target} new emails queued today${dayTotal < target ? ` — ${target - dayTotal} short (backlog + findable emails ran low)` : ' ✓ target met'}
+        <strong>${dayTotal}/${target}</strong> new cold emails queued today across today's runs. Latest run added <strong>${scheduledCount}</strong> (${backlogLeads.length} backlog · ${newLeads.length} new leads).
       </p>
       ${backlogSection}
       ${newSection}
@@ -218,7 +215,7 @@ async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount, dayTotal
     body: JSON.stringify({
       from: 'Aventra CRM <notifications@aventrasites.online>',
       to: ['joe@aventrasites.online', 'ollie@aventrasites.online'],
-      subject: `Auto lead gen: ${scheduledCount} emails scheduled (${backlogLeads.length} backlog, ${newLeads.length} new)`,
+      subject: `✓ Lead gen: ${dayTotal}/${target} new emails queued today`,
       html,
     }),
   });
@@ -381,9 +378,15 @@ exports.handler = async () => {
     const dayTotal = scheduledNewToday + scheduledCount;
     console.log(`[auto-lead-gen] Done — scheduled ${scheduledCount} this run, ${dayTotal}/${DAILY_TARGET} today`);
 
-    await sendSummaryEmail(backlogScheduled, newScheduled, scheduledCount, dayTotal, DAILY_TARGET).catch(err =>
-      console.error('[auto-lead-gen] Summary email failed:', err)
-    );
+    // The job runs every 20 min, so email only ONCE per day — on the run that
+    // pushes the tally to/over the target. Short days (target never reached)
+    // are covered by the 6pm daily digest, which reports what actually sent.
+    const targetJustReached = scheduledNewToday < DAILY_TARGET && dayTotal >= DAILY_TARGET;
+    if (targetJustReached) {
+      await sendSummaryEmail(backlogScheduled, newScheduled, scheduledCount, dayTotal, DAILY_TARGET).catch(err =>
+        console.error('[auto-lead-gen] Summary email failed:', err)
+      );
+    }
 
     return { statusCode: 200, body: JSON.stringify({ backlog: backlogScheduled.length, added: newScheduled.length, scheduled: scheduledCount, dayTotal, target: DAILY_TARGET }) };
   } catch (err) {

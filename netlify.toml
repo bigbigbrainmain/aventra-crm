@@ -6,8 +6,12 @@
 [functions."daily-digest"]
   schedule = "0 18 * * 1-5"
 
+# Runs every 20 min through the working day. Each run tops the day's new-email
+# tally up toward OUTREACH_DAILY_TARGET; once the target is met the run exits
+# immediately (no searching, no API spend). This is how "keep going until it
+# has N leads" is achieved on a plan without long-running background functions.
 [functions."auto-lead-gen"]
-  schedule = "0 7,12 * * 1-5"
+  schedule = "*/20 7-16 * * 1-5"
   timeout = 26
 
 [functions."enrich-emails-directories"]
