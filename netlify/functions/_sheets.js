@@ -11,6 +11,7 @@ const TABS = {
   ADDONS: 'Add-ons',
   CUSTOMER_ADDONS: 'Customer Add-ons',
   SCHEDULED: 'Scheduled Outreach',
+  SETTINGS: 'Settings',
 };
 
 function getClient() {
@@ -268,6 +269,63 @@ function leadIdTag(leadId) {
   return String(leadId).replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
+// ── Settings tab ────────────────────────────────────────────────────────────
+// One row per knob: A=Setting, B=Value, C=Description. Edit the Value cell in
+// the sheet (or via the CRM's Outreach page) and the scheduled functions pick
+// it up on their next run — no env-var change, no redeploy. Env vars remain
+// the fallback when a cell is blank or non-numeric.
+const SETTINGS_HEADERS = ['Setting', 'Value', 'Description'];
+
+const SETTING_KEYS = {
+  OUTREACH_DAILY_TARGET: 'Outreach Daily Target',
+  FOLLOWUP_DAILY_TARGET: 'Followup Daily Target',
+};
+
+const SETTINGS_DEFAULTS = [
+  [SETTING_KEYS.OUTREACH_DAILY_TARGET, '20', 'New cold emails auto-queued per weekday (auto-lead-gen tops the day up to this)'],
+  [SETTING_KEYS.FOLLOWUP_DAILY_TARGET, '20', 'Follow-up emails auto-queued per weekday (capped by how many leads are actually due)'],
+];
+
+const normSettingKey = (k) => String(k || '').trim().toLowerCase();
+
+// Read the Settings tab as a key→value map. Creates the tab and seeds any
+// missing default rows so every knob is always visible and editable.
+async function getSettings() {
+  await ensureTab(TABS.SETTINGS, SETTINGS_HEADERS);
+  const rows = await getRange(TABS.SETTINGS, 'A2:B');
+  const map = {};
+  for (const r of rows) {
+    const key = normSettingKey(r[0]);
+    if (key && !(key in map)) map[key] = String(r[1] ?? '').trim();
+  }
+  for (const def of SETTINGS_DEFAULTS) {
+    if (!(normSettingKey(def[0]) in map)) {
+      await appendRow(TABS.SETTINGS, def);
+      map[normSettingKey(def[0])] = def[1];
+    }
+  }
+  return map;
+}
+
+// Parse a setting as a non-negative integer, falling back when the cell is
+// blank, missing, or not a number — a typo in the sheet must never crash the
+// senders or silently zero the day's volume.
+function settingInt(settings, key, fallback) {
+  const n = parseInt(settings[normSettingKey(key)], 10);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
+}
+
+async function setSetting(key, value) {
+  await getSettings(); // ensure the tab exists and default rows are seeded
+  const rows = await getRange(TABS.SETTINGS, 'A2:A');
+  const idx = rows.findIndex(r => normSettingKey(r[0]) === normSettingKey(key));
+  if (idx === -1) {
+    await appendRow(TABS.SETTINGS, [key, String(value), '']);
+  } else {
+    await updateCell(TABS.SETTINGS, `B${idx + 2}`, String(value));
+  }
+}
+
 async function ensureTab(tabName, headers) {
   const sheets = getClient();
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
@@ -315,4 +373,8 @@ module.exports = {
   genId,
   isGenericInbox,
   leadIdTag,
+  SETTING_KEYS,
+  getSettings,
+  settingInt,
+  setSetting,
 };

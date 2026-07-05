@@ -1,4 +1,4 @@
-const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab, isGenericInbox } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, genId, ensureTab, isGenericInbox, getSettings, settingInt, SETTING_KEYS } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email', 'Type'];
 
@@ -25,11 +25,13 @@ const CITIES = [
   'Cheltenham', 'Northampton', 'Ipswich', 'Norwich', 'Cambridge',
 ];
 
-// Per-DAY target for new cold emails (not per-run). The two daily runs
-// (07:00, 12:00) each top the day's tally up toward this number, so the noon
-// run backfills whatever the morning run fell short of. OUTREACH_DAILY_TARGET
-// is the canonical name; OUTREACH_PER_RUN is still read for back-compat.
-const DAILY_TARGET = parseInt(process.env.OUTREACH_DAILY_TARGET || process.env.OUTREACH_PER_RUN || '20');
+// Per-DAY target for new cold emails (not per-run). Every 20-min run tops the
+// day's tally up toward this number, so later runs backfill whatever earlier
+// runs fell short of. The live value comes from the sheet's Settings tab
+// ("Outreach Daily Target") so it can be raised as the domain warms up without
+// a redeploy; this env-var value is only the fallback when that cell is blank
+// or not a number. OUTREACH_PER_RUN is still read for back-compat.
+const DEFAULT_DAILY_TARGET = parseInt(process.env.OUTREACH_DAILY_TARGET || process.env.OUTREACH_PER_RUN || '20');
 const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
 
@@ -230,11 +232,14 @@ exports.handler = async () => {
 
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    // Read lead data and scheduled queue together (A2:K to see the Type column)
-    const [existingRows, schedRows] = await Promise.all([
+    // Read lead data, scheduled queue (A2:K to see the Type column) and the
+    // live daily target together.
+    const [existingRows, schedRows, settings] = await Promise.all([
       getRange(TABS.LEADS, 'A2:Z'),
       getRange(TABS.SCHEDULED, 'A2:K'),
+      getSettings(),
     ]);
+    const DAILY_TARGET = settingInt(settings, SETTING_KEYS.OUTREACH_DAILY_TARGET, DEFAULT_DAILY_TARGET);
     const existingNames = new Set(existingRows.map(r => String(r[1] || '').toLowerCase().trim()));
     const scheduled = schedRows.map((r, i) => rowToScheduled(r, i + 2));
 

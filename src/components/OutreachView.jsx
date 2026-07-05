@@ -60,6 +60,99 @@ function filterByDay(items, dayFilter) {
   });
 }
 
+// Daily auto-send targets, stored in the sheet's Settings tab and read by the
+// scheduled functions on every run — so an edit here takes effect on the next
+// run without a redeploy.
+function DailyTargetsCard() {
+  const [saved, setSaved] = useState(null);        // last values from the server
+  const [outreach, setOutreach] = useState('');
+  const [followup, setFollowup] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [justSaved, setJustSaved] = useState(false);
+
+  useEffect(() => {
+    api.getOutreachSettings()
+      .then(s => {
+        setSaved(s);
+        setOutreach(String(s.outreachDailyTarget));
+        setFollowup(String(s.followupDailyTarget));
+      })
+      .catch(err => setError(err.message));
+  }, []);
+
+  const dirty = saved && (outreach !== String(saved.outreachDailyTarget) || followup !== String(saved.followupDailyTarget));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const s = await api.updateOutreachSettings({
+        outreachDailyTarget: Number(outreach),
+        followupDailyTarget: Number(followup),
+      });
+      setSaved(s);
+      setOutreach(String(s.outreachDailyTarget));
+      setFollowup(String(s.followupDailyTarget));
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!saved && !error) return null;
+
+  return (
+    <div className="mt-3 bg-white border border-slate-200 rounded-xl px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="text-sm font-semibold text-slate-700">Daily auto-send targets</span>
+        <label className="flex items-center gap-1.5 text-sm text-slate-500">
+          <input
+            type="number"
+            min="0"
+            max="200"
+            value={outreach}
+            onChange={e => setOutreach(e.target.value)}
+            className="w-16 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          new emails
+        </label>
+        <label className="flex items-center gap-1.5 text-sm text-slate-500">
+          <input
+            type="number"
+            min="0"
+            max="200"
+            value={followup}
+            onChange={e => setFollowup(e.target.value)}
+            className="w-16 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          follow-ups
+        </label>
+        <span className="text-xs text-slate-400">per weekday</span>
+        {dirty && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="ml-auto px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        )}
+        {!dirty && justSaved && (
+          <span className="ml-auto flex items-center gap-1 text-xs text-green-700 font-semibold">
+            <Check size={12} />
+            Saved — applies from the next run
+          </span>
+        )}
+      </div>
+      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+    </div>
+  );
+}
+
 function PriorityPip({ priority }) {
   const p = getPriorityStyle(priority);
   if (!p) return null;
@@ -709,6 +802,8 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       <div className="mb-5">
         <h1 className="text-xl font-bold text-slate-900">Outreach</h1>
         <p className="text-sm text-slate-500 mt-0.5">AI-powered cold email outreach</p>
+
+        <DailyTargetsCard />
 
         {filteredLead && (
           <div className="mt-3 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">

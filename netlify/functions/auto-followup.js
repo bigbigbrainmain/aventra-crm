@@ -1,13 +1,15 @@
-const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId, isGenericInbox } = require('./_sheets');
+const { TABS, rowToLead, rowToScheduled, getRange, appendRow, ensureTab, genId, isGenericInbox, getSettings, settingInt, SETTING_KEYS } = require('./_sheets');
 
 const SCHEDULED_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email', 'Type'];
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
-// Per-DAY target for follow-ups (not per-run). Both daily runs top the day's
+// Per-DAY target for follow-ups (not per-run). Each daily run tops the day's
 // tally up toward this number. Unlike new outreach, follow-ups are capped by
 // how many leads are genuinely due (contacted, 3+ days ago, no reply) — on a
 // thin day we send fewer, and the pool refills as new sends age into it.
-// FOLLOWUP_DAILY_TARGET is canonical; FOLLOWUP_PER_RUN is read for back-compat.
-const DAILY_TARGET = parseInt(process.env.FOLLOWUP_DAILY_TARGET || process.env.FOLLOWUP_PER_RUN || '20');
+// The live value comes from the sheet's Settings tab ("Followup Daily
+// Target"); this env-var value is only the fallback when that cell is blank
+// or not a number. FOLLOWUP_PER_RUN is still read for back-compat.
+const DEFAULT_DAILY_TARGET = parseInt(process.env.FOLLOWUP_DAILY_TARGET || process.env.FOLLOWUP_PER_RUN || '20');
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
@@ -140,10 +142,12 @@ exports.handler = async () => {
   try {
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 
-    const [leadRows, schedRows] = await Promise.all([
+    const [leadRows, schedRows, settings] = await Promise.all([
       getRange(TABS.LEADS, 'A2:X'),
       getRange(TABS.SCHEDULED, 'A2:K'),
+      getSettings(),
     ]);
+    const DAILY_TARGET = settingInt(settings, SETTING_KEYS.FOLLOWUP_DAILY_TARGET, DEFAULT_DAILY_TARGET);
     const scheduled = schedRows.map((r, i) => rowToScheduled(r, i + 2));
 
     // IDs of leads that already have a pending scheduled email — skip these

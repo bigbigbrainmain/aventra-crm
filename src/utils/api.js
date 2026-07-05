@@ -81,6 +81,10 @@ export const api = {
   generateOutreach: (leadId) => req('/generate-outreach', { method: 'POST', body: JSON.stringify({ leadId }) }),
   sendOutreach:     (leadId) => req('/send-outreach',     { method: 'POST', body: JSON.stringify({ leadId }) }),
 
+  // Outreach settings (daily sending targets)
+  getOutreachSettings:    ()     => req('/settings'),
+  updateOutreachSettings: (data) => req('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+
   // Scheduled emails
   getScheduledEmails:   ()         => req('/schedule-email'),
   createScheduledEmail: (data)     => req('/schedule-email',        { method: 'POST',   body: JSON.stringify(data) }),
