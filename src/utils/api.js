@@ -22,7 +22,8 @@ export const api = {
 
   // Notes
   getNotes:    (leadId)     => req(`/notes?leadId=${leadId}`),
-  addNote:     (leadId, text) => req('/notes',       { method: 'POST',   body: JSON.stringify({ leadId, text }) }),
+  getAllNotes: ()           => req('/notes'),
+  addNote:     (leadId, text, label) => req('/notes', { method: 'POST', body: JSON.stringify({ leadId, text, label }) }),
   toggleNote:  (id)         => req(`/note?id=${id}`, { method: 'PATCH' }),
   deleteNote:  (id)         => req(`/note?id=${id}`, { method: 'DELETE' }),
 

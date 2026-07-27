@@ -23,6 +23,7 @@ function CRMApp() {
 
   const [leads, setLeads] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [addons, setAddons] = useState([]);
@@ -44,9 +45,10 @@ function CRMApp() {
     setLoading(true);
     setError(null);
     try {
-      const [leadsData, tasksData, analyticsData, customersData, addonsData, customerAddonsData, scheduledData] = await Promise.all([
+      const [leadsData, tasksData, notesData, analyticsData, customersData, addonsData, customerAddonsData, scheduledData] = await Promise.all([
         api.getLeads(),
         api.getTasks(),
+        api.getAllNotes(),
         api.getAnalytics(),
         api.getCustomers(),
         api.getAddons(),
@@ -55,6 +57,7 @@ function CRMApp() {
       ]);
       setLeads(leadsData);
       setTasks(tasksData);
+      setNotes(notesData);
       setAnalytics(analyticsData);
       setCustomers(customersData);
       setAddons(addonsData);
@@ -152,6 +155,7 @@ function CRMApp() {
               <Dashboard
                 leads={leads}
                 tasks={tasks}
+                notes={notes}
                 analytics={analytics}
                 customers={customers}
                 addons={addons}

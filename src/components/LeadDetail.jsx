@@ -7,7 +7,7 @@ import {
   Loader2, SendHorizontal, Eye,
 } from 'lucide-react';
 import { api } from '../utils/api';
-import { getStatusStyle, getPriorityStyle, STATUSES, timeAgo, formatDate } from '../utils/constants';
+import { getStatusStyle, getPriorityStyle, getNoteLabelStyle, STATUSES, NOTE_LABELS, timeAgo, formatDate } from '../utils/constants';
 import ChatSection from './ChatSection';
 import { useUserSettings } from '../hooks/useUserSettings';
 
@@ -71,6 +71,7 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
   const [notes, setNotes] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [newNote, setNewNote] = useState('');
+  const [newNoteLabel, setNewNoteLabel] = useState('');
   const [newTask, setNewTask] = useState('');
   const [newTaskDue, setNewTaskDue] = useState('');
   const [addingNote, setAddingNote] = useState(false);
@@ -183,9 +184,10 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
     if (!newNote.trim()) return;
     setAddingNote(true);
     try {
-      const note = await api.addNote(lead.id, newNote.trim());
+      const note = await api.addNote(lead.id, newNote.trim(), newNoteLabel);
       setNotes(prev => [note, ...prev]);
       setNewNote('');
+      setNewNoteLabel('');
     } catch (err) {
       console.error(err);
     } finally {
@@ -801,14 +803,24 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                 onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleAddNote(); }}
                 className="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-300"
               />
-              <button
-                onClick={handleAddNote}
-                disabled={!newNote.trim() || addingNote}
-                className="mt-1.5 flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Plus size={12} />
-                {addingNote ? 'Adding...' : 'Add Note'}
-              </button>
+              <div className="mt-1.5 flex items-center gap-2">
+                <button
+                  onClick={handleAddNote}
+                  disabled={!newNote.trim() || addingNote}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Plus size={12} />
+                  {addingNote ? 'Adding...' : 'Add Note'}
+                </button>
+                <select
+                  value={newNoteLabel}
+                  onChange={e => setNewNoteLabel(e.target.value)}
+                  className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">No label</option>
+                  {NOTE_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
             </div>
 
             {/* Note list */}
@@ -822,7 +834,18 @@ export default function LeadDetail({ lead, onClose, onUpdate, onDelete, onTasksC
                     <p className={`text-sm leading-snug ${note.actioned ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                       {note.text}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">{timeAgo(note.timestamp)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-slate-400">{timeAgo(note.timestamp)}</p>
+                      {note.label && (() => {
+                        const s = getNoteLabelStyle(note.label);
+                        return s ? (
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${s.bg} ${s.text}`}>
+                            <span className={`w-1 h-1 rounded-full ${s.dot}`} />
+                            {note.label}
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
                   <div className="flex items-start gap-1 shrink-0">
                     <button

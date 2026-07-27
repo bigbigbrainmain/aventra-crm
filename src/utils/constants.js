@@ -41,6 +41,18 @@ export function getPriorityStyle(priority) {
   return PRIORITY_CONFIG[priority] || null;
 }
 
+export const NOTE_LABELS = ['Active Conversation', 'No Answer', 'Discovery Booked'];
+
+export const NOTE_LABEL_CONFIG = {
+  'Active Conversation': { bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500'   },
+  'No Answer':           { bg: 'bg-slate-100',  text: 'text-slate-600', dot: 'bg-slate-400'  },
+  'Discovery Booked':    { bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500'  },
+};
+
+export function getNoteLabelStyle(label) {
+  return NOTE_LABEL_CONFIG[label] || null;
+}
+
 export const EMAIL_STAGES = ['none', 'scheduled', 'sent', 'opened'];
 
 export const EMAIL_STAGE_CONFIG = {

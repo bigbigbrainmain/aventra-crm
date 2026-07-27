@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, Cell, ComposedChart, Line,
 } from 'recharts';
-import { getStatusStyle, isDueToday, isOverdue } from '../utils/constants';
+import { getStatusStyle, isDueToday, isOverdue, NOTE_LABELS } from '../utils/constants';
 import OutreachFlow from './OutreachFlow';
 
 const STATUS_COLORS = {
@@ -19,10 +19,22 @@ const STATUS_COLORS = {
 
 const FUNNEL_STAGES = ['New', 'Working', 'HOT', 'Proposal Requested', 'Booked', 'Closed Won'];
 
+const NOTE_LABEL_COLORS = {
+  'Active Conversation': '#60a5fa',
+  'No Answer':           '#94a3b8',
+  'Discovery Booked':    '#4ade80',
+};
+
 const RANGE_OPTIONS = [
   { label: 'Last 3 months',  value: 3  },
   { label: 'Last 6 months',  value: 6  },
   { label: 'Last 12 months', value: 12 },
+];
+
+const DAY_RANGE_OPTIONS = [
+  { label: 'Last 7 days',  value: 7  },
+  { label: 'Last 14 days', value: 14 },
+  { label: 'Last 30 days', value: 30 },
 ];
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -39,6 +51,20 @@ function getLastNMonths(n) {
     });
   }
   return months;
+}
+
+function getLastNDays(n) {
+  const days = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push({
+      key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    });
+  }
+  return days;
 }
 
 function getLeadMonth(lead) {
@@ -84,9 +110,9 @@ function StatusBadge({ status }) {
   );
 }
 
-function TimelineDropdown({ value, onChange }) {
+function TimelineDropdown({ value, onChange, options = RANGE_OPTIONS }) {
   const [open, setOpen] = useState(false);
-  const selected = RANGE_OPTIONS.find(o => o.value === value);
+  const selected = options.find(o => o.value === value);
   return (
     <div className="relative">
       <button
@@ -98,7 +124,7 @@ function TimelineDropdown({ value, onChange }) {
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-[140px]">
-          {RANGE_OPTIONS.map(o => (
+          {options.map(o => (
             <button
               key={o.value}
               onClick={() => { onChange(o.value); setOpen(false); }}
@@ -325,10 +351,11 @@ function DrilldownModal({ leads, customers, drilldown, onClose, onSelectLead }) 
 
 // ─── main dashboard ──────────────────────────────────────────────────────────
 
-export default function Dashboard({ leads, tasks, analytics, customers = [], addons = [], customerAddons = [], onSelectLead, setView }) {
+export default function Dashboard({ leads, tasks, notes = [], analytics, customers = [], addons = [], customerAddons = [], onSelectLead, setView }) {
   const [closedWonRange, setClosedWonRange] = useState(6);
   const [activityRange, setActivityRange]   = useState(6);
   const [incomeRange, setIncomeRange]       = useState(12);
+  const [noteLabelRange, setNoteLabelRange] = useState(14);
   const [drilldown, setDrilldown]           = useState(null);
 
   const todayTasks    = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
@@ -351,6 +378,14 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
     monthKey: m.key,
     'Closed Won': leads.filter(l => l.status === 'Closed Won' && getLeadMonth(l) === m.key).length,
   }));
+
+  const noteLabelDays = getLastNDays(noteLabelRange);
+  const noteLabelTrend = noteLabelDays.map(d => {
+    const dayNotes = notes.filter(n => n.timestamp && n.timestamp.slice(0, 10) === d.key);
+    const row = { day: d.label, dayKey: d.key };
+    NOTE_LABELS.forEach(lbl => { row[lbl] = dayNotes.filter(n => n.label === lbl).length; });
+    return row;
+  });
 
   const totalLeads = analytics?.totalLeads || 1;
   const funnelData = FUNNEL_STAGES.map(s => {
@@ -480,6 +515,35 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
               />
             ))}
           </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Note Label Trends */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-slate-900">Note Label Trends</h3>
+          <TimelineDropdown value={noteLabelRange} onChange={setNoteLabelRange} options={DAY_RANGE_OPTIONS} />
+        </div>
+        <p className="text-xs text-slate-400 mb-4">Notes logged per day by label</p>
+        <ResponsiveContainer width="100%" height={230}>
+          <ComposedChart data={noteLabelTrend} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+            {NOTE_LABELS.map(lbl => (
+              <Line
+                key={lbl}
+                type="monotone"
+                dataKey={lbl}
+                name={lbl}
+                stroke={NOTE_LABEL_COLORS[lbl]}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            ))}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 
