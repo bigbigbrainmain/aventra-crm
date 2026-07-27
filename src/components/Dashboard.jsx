@@ -37,6 +37,26 @@ const DAY_RANGE_OPTIONS = [
   { label: 'Last 30 days', value: 30 },
 ];
 
+const WEEK_RANGE_OPTIONS = [
+  { label: 'Last 8 weeks',  value: 8  },
+  { label: 'Last 12 weeks', value: 12 },
+  { label: 'Last 26 weeks', value: 26 },
+];
+
+const GRANULARITY_OPTIONS = [
+  { label: 'Daily',   value: 'day'   },
+  { label: 'Weekly',  value: 'week'  },
+  { label: 'Monthly', value: 'month' },
+];
+
+const NOTE_GRANULARITY_RANGES = {
+  day:   DAY_RANGE_OPTIONS,
+  week:  WEEK_RANGE_OPTIONS,
+  month: RANGE_OPTIONS,
+};
+
+const NOTE_GRANULARITY_DEFAULTS = { day: 14, week: 12, month: 6 };
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function getLastNMonths(n) {
@@ -65,6 +85,35 @@ function getLastNDays(n) {
     });
   }
   return days;
+}
+
+function mondayOf(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+function getLastNWeeks(n) {
+  const currentMonday = mondayOf(new Date());
+  const weeks = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const monday = new Date(currentMonday);
+    monday.setDate(currentMonday.getDate() - i * 7);
+    weeks.push({
+      key:   `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`,
+      label: monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    });
+  }
+  return weeks;
+}
+
+function getWeekKey(dateStr) {
+  const d = mondayOf(dateStr);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getLeadMonth(lead) {
@@ -355,7 +404,8 @@ export default function Dashboard({ leads, tasks, notes = [], analytics, custome
   const [closedWonRange, setClosedWonRange] = useState(6);
   const [activityRange, setActivityRange]   = useState(6);
   const [incomeRange, setIncomeRange]       = useState(12);
-  const [noteLabelRange, setNoteLabelRange] = useState(14);
+  const [noteLabelGranularity, setNoteLabelGranularity] = useState('day');
+  const [noteLabelRange, setNoteLabelRange] = useState(NOTE_GRANULARITY_DEFAULTS.day);
   const [drilldown, setDrilldown]           = useState(null);
 
   const todayTasks    = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
@@ -379,13 +429,27 @@ export default function Dashboard({ leads, tasks, notes = [], analytics, custome
     'Closed Won': leads.filter(l => l.status === 'Closed Won' && getLeadMonth(l) === m.key).length,
   }));
 
-  const noteLabelDays = getLastNDays(noteLabelRange);
-  const noteLabelTrend = noteLabelDays.map(d => {
-    const dayNotes = notes.filter(n => n.timestamp && n.timestamp.slice(0, 10) === d.key);
-    const row = { day: d.label, dayKey: d.key };
-    NOTE_LABELS.forEach(lbl => { row[lbl] = dayNotes.filter(n => n.label === lbl).length; });
+  const noteLabelBuckets = noteLabelGranularity === 'day' ? getLastNDays(noteLabelRange)
+    : noteLabelGranularity === 'week' ? getLastNWeeks(noteLabelRange)
+    : getLastNMonths(noteLabelRange);
+
+  const noteLabelTrend = noteLabelBuckets.map(b => {
+    const bucketNotes = notes.filter(n => {
+      if (!n.timestamp) return false;
+      if (noteLabelGranularity === 'day') return n.timestamp.slice(0, 10) === b.key;
+      if (noteLabelGranularity === 'week') return getWeekKey(n.timestamp) === b.key;
+      return n.timestamp.slice(0, 7) === b.key;
+    });
+    const row = { period: b.label, periodKey: b.key };
+    NOTE_LABELS.forEach(lbl => { row[lbl] = bucketNotes.filter(n => n.label === lbl).length; });
     return row;
   });
+
+  const noteLabelDescription = noteLabelGranularity === 'day'
+    ? 'Notes logged per individual day by label'
+    : noteLabelGranularity === 'week'
+    ? 'Notes logged per week (starting Monday) by label'
+    : 'Notes logged per month by label';
 
   const totalLeads = analytics?.totalLeads || 1;
   const funnelData = FUNNEL_STAGES.map(s => {
@@ -522,13 +586,24 @@ export default function Dashboard({ leads, tasks, notes = [], analytics, custome
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold text-slate-900">Note Label Trends</h3>
-          <TimelineDropdown value={noteLabelRange} onChange={setNoteLabelRange} options={DAY_RANGE_OPTIONS} />
+          <div className="flex items-center gap-2">
+            <TimelineDropdown
+              value={noteLabelGranularity}
+              onChange={g => { setNoteLabelGranularity(g); setNoteLabelRange(NOTE_GRANULARITY_DEFAULTS[g]); }}
+              options={GRANULARITY_OPTIONS}
+            />
+            <TimelineDropdown
+              value={noteLabelRange}
+              onChange={setNoteLabelRange}
+              options={NOTE_GRANULARITY_RANGES[noteLabelGranularity]}
+            />
+          </div>
         </div>
-        <p className="text-xs text-slate-400 mb-4">Notes logged per individual day by label</p>
+        <p className="text-xs text-slate-400 mb-4">{noteLabelDescription}</p>
         <ResponsiveContainer width="100%" height={230}>
           <ComposedChart data={noteLabelTrend} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
