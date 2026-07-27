@@ -524,26 +524,24 @@ export default function Dashboard({ leads, tasks, notes = [], analytics, custome
           <h3 className="font-semibold text-slate-900">Note Label Trends</h3>
           <TimelineDropdown value={noteLabelRange} onChange={setNoteLabelRange} options={DAY_RANGE_OPTIONS} />
         </div>
-        <p className="text-xs text-slate-400 mb-4">Notes logged per day by label</p>
+        <p className="text-xs text-slate-400 mb-4">Notes logged per individual day by label</p>
         <ResponsiveContainer width="100%" height={230}>
-          <ComposedChart data={noteLabelTrend} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+          <BarChart data={noteLabelTrend} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
             <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
             {NOTE_LABELS.map(lbl => (
-              <Line
+              <Bar
                 key={lbl}
-                type="monotone"
                 dataKey={lbl}
                 name={lbl}
-                stroke={NOTE_LABEL_COLORS[lbl]}
-                strokeWidth={2}
-                dot={{ r: 3 }}
+                fill={NOTE_LABEL_COLORS[lbl]}
+                radius={[3, 3, 0, 0]}
               />
             ))}
-          </ComposedChart>
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
