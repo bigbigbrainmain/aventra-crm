@@ -67,7 +67,7 @@ function rowToLead(row, rowNum) {
   };
 }
 
-// Note columns: A(0)=ID, B(1)=Lead ID, C(2)=Note Text, D(3)=Timestamp, E(4)=Actioned
+// Note columns: A(0)=ID, B(1)=Lead ID, C(2)=Note Text, D(3)=Timestamp, E(4)=Actioned, F(5)=Label
 function rowToNote(row, rowNum) {
   return {
     id: String(row[0] || ''),
@@ -75,6 +75,7 @@ function rowToNote(row, rowNum) {
     text: String(row[2] || ''),
     timestamp: String(row[3] || ''),
     actioned: row[4] === 'TRUE' || row[4] === true,
+    label: String(row[5] || ''),
     _row: rowNum,
   };
 }

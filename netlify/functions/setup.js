@@ -50,9 +50,9 @@ exports.handler = async (event) => {
       if (toCreate.includes('Notes')) {
         headerUpdates.push(sheets.spreadsheets.values.update({
           spreadsheetId: SHEET_ID,
-          range: 'Notes!A1:E1',
+          range: 'Notes!A1:F1',
           valueInputOption: 'USER_ENTERED',
-          requestBody: { values: [['ID', 'Lead ID', 'Note Text', 'Timestamp', 'Actioned']] },
+          requestBody: { values: [['ID', 'Lead ID', 'Note Text', 'Timestamp', 'Actioned', 'Label']] },
         }));
       }
       if (toCreate.includes('Tasks')) {

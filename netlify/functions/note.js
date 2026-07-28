@@ -8,7 +8,7 @@ const HEADERS = {
 };
 
 async function findNote(noteId) {
-  const rows = await getRange(TABS.NOTES, 'A2:E');
+  const rows = await getRange(TABS.NOTES, 'A2:F');
   for (let i = 0; i < rows.length; i++) {
     if (String(rows[i][0]) === noteId) {
       return { note: rowToNote(rows[i], i + 2), rowNum: i + 2 };

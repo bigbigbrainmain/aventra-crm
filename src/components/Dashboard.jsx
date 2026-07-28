@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, Cell, ComposedChart, Line,
 } from 'recharts';
-import { getStatusStyle, isDueToday, isOverdue } from '../utils/constants';
+import { getStatusStyle, isDueToday, isOverdue, NOTE_LABELS } from '../utils/constants';
 import OutreachFlow from './OutreachFlow';
 
 const STATUS_COLORS = {
@@ -19,11 +19,43 @@ const STATUS_COLORS = {
 
 const FUNNEL_STAGES = ['New', 'Working', 'HOT', 'Proposal Requested', 'Booked', 'Closed Won'];
 
+const NOTE_LABEL_COLORS = {
+  'Active Conversation': '#60a5fa',
+  'No Answer':           '#94a3b8',
+  'Discovery Booked':    '#4ade80',
+};
+
 const RANGE_OPTIONS = [
   { label: 'Last 3 months',  value: 3  },
   { label: 'Last 6 months',  value: 6  },
   { label: 'Last 12 months', value: 12 },
 ];
+
+const DAY_RANGE_OPTIONS = [
+  { label: 'Last 7 days',  value: 7  },
+  { label: 'Last 14 days', value: 14 },
+  { label: 'Last 30 days', value: 30 },
+];
+
+const WEEK_RANGE_OPTIONS = [
+  { label: 'Last 8 weeks',  value: 8  },
+  { label: 'Last 12 weeks', value: 12 },
+  { label: 'Last 26 weeks', value: 26 },
+];
+
+const GRANULARITY_OPTIONS = [
+  { label: 'Daily',   value: 'day'   },
+  { label: 'Weekly',  value: 'week'  },
+  { label: 'Monthly', value: 'month' },
+];
+
+const NOTE_GRANULARITY_RANGES = {
+  day:   DAY_RANGE_OPTIONS,
+  week:  WEEK_RANGE_OPTIONS,
+  month: RANGE_OPTIONS,
+};
+
+const NOTE_GRANULARITY_DEFAULTS = { day: 14, week: 12, month: 6 };
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -39,6 +71,49 @@ function getLastNMonths(n) {
     });
   }
   return months;
+}
+
+function getLastNDays(n) {
+  const days = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    days.push({
+      key:   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+      label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    });
+  }
+  return days;
+}
+
+function mondayOf(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+function getLastNWeeks(n) {
+  const currentMonday = mondayOf(new Date());
+  const weeks = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const monday = new Date(currentMonday);
+    monday.setDate(currentMonday.getDate() - i * 7);
+    weeks.push({
+      key:   `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`,
+      label: monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    });
+  }
+  return weeks;
+}
+
+function getWeekKey(dateStr) {
+  const d = mondayOf(dateStr);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getLeadMonth(lead) {
@@ -84,9 +159,9 @@ function StatusBadge({ status }) {
   );
 }
 
-function TimelineDropdown({ value, onChange }) {
+function TimelineDropdown({ value, onChange, options = RANGE_OPTIONS }) {
   const [open, setOpen] = useState(false);
-  const selected = RANGE_OPTIONS.find(o => o.value === value);
+  const selected = options.find(o => o.value === value);
   return (
     <div className="relative">
       <button
@@ -98,7 +173,7 @@ function TimelineDropdown({ value, onChange }) {
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-[140px]">
-          {RANGE_OPTIONS.map(o => (
+          {options.map(o => (
             <button
               key={o.value}
               onClick={() => { onChange(o.value); setOpen(false); }}
@@ -325,10 +400,12 @@ function DrilldownModal({ leads, customers, drilldown, onClose, onSelectLead }) 
 
 // ─── main dashboard ──────────────────────────────────────────────────────────
 
-export default function Dashboard({ leads, tasks, analytics, customers = [], addons = [], customerAddons = [], onSelectLead, setView }) {
+export default function Dashboard({ leads, tasks, notes = [], analytics, customers = [], addons = [], customerAddons = [], onSelectLead, setView }) {
   const [closedWonRange, setClosedWonRange] = useState(6);
   const [activityRange, setActivityRange]   = useState(6);
   const [incomeRange, setIncomeRange]       = useState(12);
+  const [noteLabelGranularity, setNoteLabelGranularity] = useState('day');
+  const [noteLabelRange, setNoteLabelRange] = useState(NOTE_GRANULARITY_DEFAULTS.day);
   const [drilldown, setDrilldown]           = useState(null);
 
   const todayTasks    = tasks.filter(t => !t.completed && isDueToday(t.dueDate));
@@ -351,6 +428,28 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
     monthKey: m.key,
     'Closed Won': leads.filter(l => l.status === 'Closed Won' && getLeadMonth(l) === m.key).length,
   }));
+
+  const noteLabelBuckets = noteLabelGranularity === 'day' ? getLastNDays(noteLabelRange)
+    : noteLabelGranularity === 'week' ? getLastNWeeks(noteLabelRange)
+    : getLastNMonths(noteLabelRange);
+
+  const noteLabelTrend = noteLabelBuckets.map(b => {
+    const bucketNotes = notes.filter(n => {
+      if (!n.timestamp) return false;
+      if (noteLabelGranularity === 'day') return n.timestamp.slice(0, 10) === b.key;
+      if (noteLabelGranularity === 'week') return getWeekKey(n.timestamp) === b.key;
+      return n.timestamp.slice(0, 7) === b.key;
+    });
+    const row = { period: b.label, periodKey: b.key };
+    NOTE_LABELS.forEach(lbl => { row[lbl] = bucketNotes.filter(n => n.label === lbl).length; });
+    return row;
+  });
+
+  const noteLabelDescription = noteLabelGranularity === 'day'
+    ? 'Notes logged per individual day by label'
+    : noteLabelGranularity === 'week'
+    ? 'Notes logged per week (starting Monday) by label'
+    : 'Notes logged per month by label';
 
   const totalLeads = analytics?.totalLeads || 1;
   const funnelData = FUNNEL_STAGES.map(s => {
@@ -480,6 +579,46 @@ export default function Dashboard({ leads, tasks, analytics, customers = [], add
               />
             ))}
           </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Note Label Trends */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-slate-900">Note Label Trends</h3>
+          <div className="flex items-center gap-2">
+            <TimelineDropdown
+              value={noteLabelGranularity}
+              onChange={g => { setNoteLabelGranularity(g); setNoteLabelRange(NOTE_GRANULARITY_DEFAULTS[g]); }}
+              options={GRANULARITY_OPTIONS}
+            />
+            <TimelineDropdown
+              value={noteLabelRange}
+              onChange={setNoteLabelRange}
+              options={NOTE_GRANULARITY_RANGES[noteLabelGranularity]}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 mb-4">{noteLabelDescription}</p>
+        <ResponsiveContainer width="100%" height={230}>
+          <ComposedChart data={noteLabelTrend} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+            {NOTE_LABELS.map(lbl => (
+              <Line
+                key={lbl}
+                type="linear"
+                dataKey={lbl}
+                name={lbl}
+                stroke={NOTE_LABEL_COLORS[lbl]}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            ))}
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
 

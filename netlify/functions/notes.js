@@ -13,7 +13,7 @@ exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'GET') {
       const leadId = (event.queryStringParameters || {}).leadId;
-      const rows = await getRange(TABS.NOTES, 'A2:E');
+      const rows = await getRange(TABS.NOTES, 'A2:F');
       let notes = rows
         .map((row, i) => rowToNote(row, i + 2))
         .filter(n => n.id);
@@ -31,11 +31,12 @@ exports.handler = async (event) => {
       }
       const id = genId('N');
       const timestamp = new Date().toISOString();
-      await appendRow(TABS.NOTES, [id, data.leadId, data.text, timestamp, 'FALSE']);
+      const label = data.label || '';
+      await appendRow(TABS.NOTES, [id, data.leadId, data.text, timestamp, 'FALSE', label]);
       return {
         statusCode: 201,
         headers: HEADERS,
-        body: JSON.stringify({ id, leadId: data.leadId, text: data.text, timestamp, actioned: false }),
+        body: JSON.stringify({ id, leadId: data.leadId, text: data.text, timestamp, actioned: false, label }),
       };
     }
 
