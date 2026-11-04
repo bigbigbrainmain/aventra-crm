@@ -340,7 +340,7 @@ export default function BulkSendView({ leads, pendingScheduledLeadIds, onSent })
 
         <p className="text-xs text-slate-400 mt-2 flex items-start gap-1">
           <Info size={12} className="mt-0.5 shrink-0" />
-          Sent exactly as written, from {SENDER_LABEL[draft.sender]}@aventrasites.online. Only a signature (name, Aventra, website) and an unsubscribe link are added. No booking link or Joe sign-off.
+          Sent as plain text exactly as written, from {draft.sender}@aventrasites.online. Only a signature and an unsubscribe line are added. No booking link, tracking or Joe sign-off, so it lands in the inbox more often.
         </p>
 
         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
@@ -374,7 +374,6 @@ export default function BulkSendView({ leads, pendingScheduledLeadIds, onSent })
                   <th className="font-normal py-0.5">Template</th>
                   <th className="font-normal text-right">Sent</th>
                   <th className="font-normal text-right">Queued</th>
-                  <th className="font-normal text-right">Opened</th>
                   <th className="font-normal text-right">Replied</th>
                 </tr>
               </thead>
@@ -384,13 +383,12 @@ export default function BulkSendView({ leads, pendingScheduledLeadIds, onSent })
                     <td className="py-0.5">{t.name} <span className="text-slate-400 font-normal">· {SENDER_LABEL[t.sender]}</span></td>
                     <td className="text-right">{t.stats.sent}</td>
                     <td className="text-right">{t.stats.queued}</td>
-                    <td className="text-right">{t.stats.opened} <span className="text-slate-400">({pct(t.stats.opened, t.stats.sent)})</span></td>
                     <td className="text-right">{t.stats.replied} <span className="text-slate-400">({pct(t.stats.replied, t.stats.sent)})</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="text-[11px] text-slate-400 mt-1">Opens are approximate (some email apps block tracking).</p>
+            <p className="text-[11px] text-slate-400 mt-1">Bulk send emails are plain text, so opens aren't tracked. Replies are what count.</p>
           </div>
         )}
       </Card>
@@ -501,7 +499,7 @@ export default function BulkSendView({ leads, pendingScheduledLeadIds, onSent })
                         className="w-full text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 font-[inherit] focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <p className="text-xs text-slate-400 whitespace-pre-line border-t border-slate-100 pt-2">
-                        {draft.sender === 'ollie' ? '--\nOllie Eastham\nAventra\naventrasites.online\nUnsubscribe' : '--\nJoe Clacher\nAventra\n07710 988 228\naventrasites.online\nUnsubscribe'}
+                        {draft.sender === 'ollie' ? '--\nOllie Eastham\nAventra\naventrasites.online\n\nNot for you? Unsubscribe here: <link>' : '--\nJoe Clacher\nAventra\n07710 988 228\naventrasites.online\n\nNot for you? Unsubscribe here: <link>'}
                       </p>
                       {r.edited && (
                         <button onClick={() => setOverrides(({ [r.lead.id]: _, ...rest }) => rest)} className="text-xs text-slate-500 hover:text-slate-700">

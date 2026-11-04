@@ -40,52 +40,32 @@ function replyToFor(sender, leadId) {
   return sender.id === REPLY_TRACKING_LOCAL ? [tracking] : [tracking, sender.email];
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 // Any {placeholder} left in the text means the template wasn't filled in.
 function leftoverPlaceholders(text) {
   return String(text || '').match(/\{[a-zA-Z]+\}/g) || [];
 }
 
+// Template emails go out as PLAIN TEXT ONLY. With no HTML part, Resend has
+// nothing to inject its open-tracking pixel into or rewrite links in (it did
+// both, routing even the unsubscribe link via as.aventrasites.online), and the
+// email reads like one a person typed. That lands in the inbox more often.
+// Trade-off: opens aren't tracked for these emails. Replies and bounces still are.
 function buildTemplateEmail({ body, sender, leadId }) {
   const unsubUrl = `${APP_URL}/.netlify/functions/outreach-unsubscribe?id=${leadId}`;
   const sigLines = [sender.name, 'Aventra', sender.phone, DOMAIN].filter(Boolean);
-
-  const text = `${body}\n\n--\n${sigLines.join('\n')}\n\nTo unsubscribe: ${unsubUrl}`;
-
-  const bodyHtml = escapeHtml(body).replace(/\n/g, '<br>');
-  const sigHtml = sigLines
-    .map(l => l === DOMAIN
-      ? `<a href="https://${DOMAIN}" style="color: #555; text-decoration: none;">${DOMAIN}</a>`
-      : escapeHtml(l))
-    .join('<br>\n  ');
-  const html = `<div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; line-height: 1.7; max-width: 600px;">
-<p style="margin: 0 0 24px 0;">${bodyHtml}</p>
-<p style="color: #555; font-size: 13px; line-height: 1.6; border-top: 1px solid #e5e7eb; padding-top: 16px; margin: 0 0 32px 0;">
-  --<br>
-  ${sigHtml}
-</p>
-<p style="font-size: 11px; color: #999; margin: 0;">
-  <a href="${unsubUrl}" style="color: #999;">Unsubscribe</a>
-</p>
-</div>`;
-
-  return { html, text, unsubUrl };
+  const text = `${body}\n\n--\n${sigLines.join('\n')}\n\nNot for you? Unsubscribe here: ${unsubUrl}`;
+  return { text, unsubUrl };
 }
 
 async function sendTemplateEmail({ to, subject, body, sender, leadId, idempotencyKey }) {
-  const { html, text, unsubUrl } = buildTemplateEmail({ body, sender, leadId });
+  const { text, unsubUrl } = buildTemplateEmail({ body, sender, leadId });
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
-      // Resend dedupes identical keys for 24h — guards double-clicks and
-      // overlapping scheduled-send runs.
+      // Resend dedupes identical keys for 24h, guarding against double-clicks
+      // and overlapping scheduled-send runs.
       'Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify({
@@ -93,13 +73,13 @@ async function sendTemplateEmail({ to, subject, body, sender, leadId, idempotenc
       to: [to],
       reply_to: replyToFor(sender, leadId),
       subject,
-      html,
-      text,
+      text, // no html on purpose, see buildTemplateEmail
       headers: {
+        // Gmail shows its own one-click "Unsubscribe" button from these
         'List-Unsubscribe': `<${unsubUrl}>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
-      // Lets resend-webhook record opens/bounces against the lead
+      // Lets resend-webhook record bounces/complaints against the lead
       tags: [{ name: 'leadId', value: leadIdTag(leadId) }],
     }),
   });
