@@ -11,6 +11,7 @@ const TABS = {
   ADDONS: 'Add-ons',
   CUSTOMER_ADDONS: 'Customer Add-ons',
   SCHEDULED: 'Scheduled Outreach',
+  TEMPLATES: 'Email Templates',
 };
 
 function getClient() {
@@ -157,6 +158,24 @@ function rowToScheduled(row, rowNum) {
     error: String(row[8] || ''),
     leadEmail: String(row[9] || ''),
     type: String(row[10] || ''),
+    // L/M are only set on template sends ('joe' | 'ollie', template ID)
+    sender: String(row[11] || ''),
+    templateId: String(row[12] || ''),
+    _row: rowNum,
+  };
+}
+
+// Email Templates tab: A=ID, B=Name, C=Sender, D=Subject, E=Body,
+// F=Created At, G=Updated At
+function rowToTemplate(row, rowNum) {
+  return {
+    id: String(row[0] || ''),
+    name: String(row[1] || ''),
+    sender: String(row[2] || 'joe'),
+    subject: String(row[3] || ''),
+    body: String(row[4] || ''),
+    createdAt: String(row[5] || ''),
+    updatedAt: String(row[6] || ''),
     _row: rowNum,
   };
 }
@@ -197,6 +216,19 @@ async function appendRow(tab, row) {
     range: `${tab}!A1`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
+  });
+}
+
+// Append several rows in one API call (one call per row is slow enough to
+// blow the function timeout when queuing a batch of 30).
+async function appendRows(tab, rows) {
+  if (!rows.length) return;
+  const sheets = getClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${tab}!A1`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: rows },
   });
 }
 
@@ -306,8 +338,10 @@ module.exports = {
   rowToAddon,
   rowToCustomerAddon,
   rowToScheduled,
+  rowToTemplate,
   getRange,
   appendRow,
+  appendRows,
   updateCell,
   updateRow,
   deleteRow,

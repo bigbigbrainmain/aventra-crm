@@ -1,4 +1,9 @@
 const { TABS, rowToLead, rowToScheduled, getRange, updateRow, updateRange, ensureTab, isGenericInbox, leadIdTag } = require('./_sheets');
+const { SENDERS, sendTemplateEmail, ukDate } = require('./_template-email');
+
+// Row types written by the (now disabled) automation. Manual rows have no
+// type (AI pitch scheduled by hand) or type 'template' (Bulk send).
+const AUTO_TYPES = new Set(['new', 'followup']);
 
 const FROM = process.env.OUTREACH_FROM || 'joe@aventrasites.online';
 const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Joe Clacher';
@@ -28,8 +33,9 @@ exports.handler = async () => {
   try {
     await ensureTab(TABS.SCHEDULED, TAB_HEADERS);
 
-    // A2:K so we can see the Type column ('new' / 'followup' = auto-generated)
-    const rows = await getRange(TABS.SCHEDULED, 'A2:K');
+    // A2:M: K=Type ('new'/'followup' = auto-generated, 'template' = Bulk send),
+    // L=Sender, M=Template ID
+    const rows = await getRange(TABS.SCHEDULED, 'A2:M');
     const now = Date.now();
     const autoEnabled = process.env.AUTO_OUTREACH_ENABLED === 'true';
 
@@ -37,8 +43,7 @@ exports.handler = async () => {
       .map((row, i) => rowToScheduled(row, i + 2))
       .filter(s => s.id && s.status === 'pending' && s.sendAt && new Date(s.sendAt).getTime() <= now)
       // While auto outreach is off, only send rows a person scheduled by hand.
-      // Auto-generated rows carry a Type ('new' / 'followup'); manual ones don't.
-      .filter(s => autoEnabled || !s.type);
+      .filter(s => autoEnabled || !AUTO_TYPES.has(s.type));
 
     // Deduplicate by leadId — auto-lead-gen can double-fire and create two rows per lead
     const seenLeadIds = new Set();
@@ -109,6 +114,32 @@ exports.handler = async () => {
             item.body, item.sendAt, 'skipped', item.createdAt, 'Already emailed today', item.leadEmail,
           ]).catch(() => {});
           console.log(`[scheduled-send] Skipped ${item.businessName} — already emailed in last 12h`);
+          continue;
+        }
+
+        if (item.type === 'template') {
+          // Bulk-send template: sent as written, from the chosen sender, with
+          // only their signature + unsubscribe added (no Joe CTA).
+          const sender = SENDERS[item.sender];
+          if (!sender) throw new Error(`Unknown sender "${item.sender}"`);
+          await sendTemplateEmail({
+            to: item.leadEmail, subject: item.subject, body: item.body, sender, leadId: item.leadId,
+            idempotencyKey: `template-${item.leadId}-${ukDate(new Date().toISOString())}`,
+          });
+          const sentAt = new Date().toISOString();
+          await updateRow(TABS.SCHEDULED, item._row, [
+            item.id, item.leadId, item.businessName, item.subject,
+            item.body, item.sendAt, 'sent', item.createdAt, '', item.leadEmail,
+          ]);
+          if (leadResult) {
+            const { lead, rowNum: leadRow } = leadResult;
+            await updateRange(TABS.LEADS, `M${leadRow}`, [item.subject, item.body]);
+            await updateRange(TABS.LEADS, `S${leadRow}`, [
+              lead.outreachSentAt || sentAt, (lead.outreachCount || 0) + 1, sentAt,
+            ]);
+          }
+          sentCount++;
+          console.log(`[scheduled-send] Template (${sender.id}) sent to ${item.businessName} (${item.leadEmail})`);
           continue;
         }
 

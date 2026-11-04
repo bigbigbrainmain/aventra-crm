@@ -31,7 +31,13 @@ exports.handler = async (event) => {
     if (!placesRes.ok) {
       const errText = await placesRes.text();
       console.error('Places API error:', placesRes.status, errText);
-      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ error: 'Google Places API error: ' + placesRes.status }) };
+      // Surface Google's own reason (e.g. quota exceeded) instead of a bare code
+      let reason = '';
+      try { reason = JSON.parse(errText).error?.message || ''; } catch { reason = errText.slice(0, 200); }
+      const hint = placesRes.status === 429
+        ? ' (quota used up. Wait and retry, or raise the Places API quota in Google Cloud Console)'
+        : '';
+      return { statusCode: 502, headers: HEADERS, body: JSON.stringify({ error: `Google Places API error: ${placesRes.status}${reason ? ` — ${reason}` : ''}${hint}` }) };
     }
 
     const placesData = await placesRes.json();

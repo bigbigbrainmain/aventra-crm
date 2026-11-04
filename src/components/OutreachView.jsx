@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { timeAgo, getStatusStyle, getPriorityStyle } from '../utils/constants';
 import { api } from '../utils/api';
+import BulkSendView from './BulkSendView';
 
 const PRIORITY_ORDER = { '🔴 Priority 1': 0, '🟠 Priority 2': 1, '🟡 Priority 3': 2, '🟢 Skip': 3 };
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit']);
@@ -708,7 +709,7 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-xl font-bold text-slate-900">Outreach</h1>
-        <p className="text-sm text-slate-500 mt-0.5">AI-powered cold email outreach</p>
+        <p className="text-sm text-slate-500 mt-0.5">Manual cold email: AI pitches one by one, or bulk send from a template</p>
 
         {filteredLead && (
           <div className="mt-3 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
@@ -733,6 +734,7 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
       {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-4">
         {[
+          { id: 'bulk',      label: 'Bulk send' },
           { id: 'queue',     label: `Queue (${totalQueueCount + totalFollowupCount})` },
           { id: 'sent',      label: `Sent (${leads.filter(l => l.outreachCount > 0).length})` },
           { id: 'scheduled', label: `Scheduled (${pendingScheduled.length})` },
@@ -749,8 +751,17 @@ export default function OutreachView({ leads, onSelectLead, onRefresh }) {
         ))}
       </div>
 
-      {/* Filters (not shown in scheduled tab) */}
-      {tab !== 'scheduled' && (
+      {/* ── Bulk send tab (has its own filters) ── */}
+      {tab === 'bulk' && (
+        <BulkSendView
+          leads={leads}
+          pendingScheduledLeadIds={pendingScheduledLeadIds}
+          onSent={() => { onRefresh?.(); loadScheduled(); }}
+        />
+      )}
+
+      {/* Filters (not shown in scheduled / bulk tabs) */}
+      {tab !== 'scheduled' && tab !== 'bulk' && (
         <div className="flex flex-wrap items-center gap-2 mb-5">
           <div className="relative flex-1 min-w-[200px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

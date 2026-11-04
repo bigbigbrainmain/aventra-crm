@@ -87,4 +87,13 @@ export const api = {
   createScheduledEmail: (data)     => req('/schedule-email',        { method: 'POST',   body: JSON.stringify(data) }),
   updateScheduledEmail: (id, data) => req(`/schedule-email?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteScheduledEmail: (id)       => req(`/schedule-email?id=${id}`, { method: 'DELETE' }),
+
+  // Bulk send (templates)
+  getTemplates:    ()         => req('/templates'),
+  createTemplate:  (data)     => req('/templates',          { method: 'POST',   body: JSON.stringify(data) }),
+  updateTemplate:  (id, data) => req(`/templates?id=${id}`, { method: 'PATCH',  body: JSON.stringify(data) }),
+  deleteTemplate:  (id)       => req(`/templates?id=${id}`, { method: 'DELETE' }),
+  getTemplateUsage: ()        => req('/send-template'),
+  sendTemplateOne:  (data)    => req('/send-template', { method: 'POST', body: JSON.stringify({ action: 'send', ...data }) }),
+  queueTemplate:    (data)    => req('/send-template', { method: 'POST', body: JSON.stringify({ action: 'queue', ...data }) }),
 };
