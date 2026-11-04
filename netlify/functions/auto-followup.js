@@ -137,6 +137,11 @@ async function sendSummaryEmail(coldNames, warmNames) {
 }
 
 exports.handler = async () => {
+  // Kill switch: auto outreach is off unless explicitly re-enabled.
+  if (process.env.AUTO_OUTREACH_ENABLED !== 'true') {
+    console.log('[auto-followup] Disabled (AUTO_OUTREACH_ENABLED is not "true")');
+    return { statusCode: 200, body: JSON.stringify({ disabled: true }) };
+  }
   try {
     await ensureTab(TABS.SCHEDULED, SCHEDULED_HEADERS);
 

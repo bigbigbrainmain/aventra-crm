@@ -6,12 +6,13 @@
 [functions."daily-digest"]
   schedule = "0 18 * * 1-5"
 
-# Runs every 20 min through the working day. Each run tops the day's new-email
-# tally up toward OUTREACH_DAILY_TARGET; once the target is met the run exits
-# immediately (no searching, no API spend). This is how "keep going until it
-# has N leads" is achieved on a plan without long-running background functions.
+# AUTO OUTREACH IS OFF. auto-lead-gen and auto-followup no longer run on a
+# schedule, and both exit immediately unless AUTO_OUTREACH_ENABLED=true is set
+# in Netlify. All cold email is now sent manually from the Outreach tab.
+# To re-enable: restore the schedules below AND set AUTO_OUTREACH_ENABLED=true.
+#   auto-lead-gen:  schedule = "*/20 7-16 * * 1-5"
+#   auto-followup:  schedule = "0 8,13 * * 1-5"
 [functions."auto-lead-gen"]
-  schedule = "*/20 7-16 * * 1-5"
   timeout = 26
 
 [functions."enrich-emails-directories"]
@@ -19,9 +20,10 @@
   timeout = 26
 
 [functions."auto-followup"]
-  schedule = "0 8,13 * * 1-5"
   timeout = 26
 
+# Still runs hourly, but only to deliver emails a person scheduled by hand
+# (Outreach > Schedule). It skips auto-generated rows while auto outreach is off.
 [functions."scheduled-send"]
   schedule = "0 * * * *"
 

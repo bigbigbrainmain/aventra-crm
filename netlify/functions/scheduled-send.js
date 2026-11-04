@@ -28,12 +28,17 @@ exports.handler = async () => {
   try {
     await ensureTab(TABS.SCHEDULED, TAB_HEADERS);
 
-    const rows = await getRange(TABS.SCHEDULED, 'A2:J');
+    // A2:K so we can see the Type column ('new' / 'followup' = auto-generated)
+    const rows = await getRange(TABS.SCHEDULED, 'A2:K');
     const now = Date.now();
+    const autoEnabled = process.env.AUTO_OUTREACH_ENABLED === 'true';
 
     const allDue = rows
       .map((row, i) => rowToScheduled(row, i + 2))
-      .filter(s => s.id && s.status === 'pending' && s.sendAt && new Date(s.sendAt).getTime() <= now);
+      .filter(s => s.id && s.status === 'pending' && s.sendAt && new Date(s.sendAt).getTime() <= now)
+      // While auto outreach is off, only send rows a person scheduled by hand.
+      // Auto-generated rows carry a Type ('new' / 'followup'); manual ones don't.
+      .filter(s => autoEnabled || !s.type);
 
     // Deduplicate by leadId — auto-lead-gen can double-fire and create two rows per lead
     const seenLeadIds = new Set();

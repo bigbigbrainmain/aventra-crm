@@ -222,6 +222,11 @@ async function sendSummaryEmail(backlogLeads, newLeads, scheduledCount, dayTotal
 }
 
 exports.handler = async () => {
+  // Kill switch: auto outreach is off unless explicitly re-enabled.
+  if (process.env.AUTO_OUTREACH_ENABLED !== 'true') {
+    console.log('[auto-lead-gen] Disabled (AUTO_OUTREACH_ENABLED is not "true")');
+    return { statusCode: 200, body: JSON.stringify({ disabled: true }) };
+  }
   const startTime = Date.now();
   const timeLeft = () => Date.now() - startTime < TIME_BUDGET_MS;
   try {
