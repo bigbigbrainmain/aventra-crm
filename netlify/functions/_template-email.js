@@ -8,7 +8,7 @@
 
 const { leadIdTag } = require('./_sheets');
 
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 const DOMAIN = 'aventrasites.online';
 
 const SENDERS = {

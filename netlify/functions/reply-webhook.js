@@ -1,6 +1,6 @@
 const { TABS, rowToLead, getRange, updateRange } = require('./_sheets');
 
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 
 async function findLead(leadId) {
   const rows = await getRange(TABS.LEADS, 'A2:X');

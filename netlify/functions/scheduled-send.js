@@ -7,7 +7,7 @@ const AUTO_TYPES = new Set(['new', 'followup']);
 
 const FROM = process.env.OUTREACH_FROM || 'joe@aventrasites.online';
 const FROM_NAME = process.env.OUTREACH_FROM_NAME || 'Joe Clacher';
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 const BOOKING_URL = process.env.BOOKING_URL || 'https://calendly.com/joe-s-clacher/30min';
 
 const TAB_HEADERS = ['ID', 'Lead ID', 'Business Name', 'Subject', 'Body', 'Send At', 'Status', 'Created At', 'Error', 'Lead Email'];

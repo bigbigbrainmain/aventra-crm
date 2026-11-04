@@ -30,7 +30,7 @@ const CITIES = [
 // run backfills whatever the morning run fell short of. OUTREACH_DAILY_TARGET
 // is the canonical name; OUTREACH_PER_RUN is still read for back-compat.
 const DAILY_TARGET = parseInt(process.env.OUTREACH_DAILY_TARGET || process.env.OUTREACH_PER_RUN || '20');
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 const DEAD_STATUSES = new Set(['Lost', 'Qualified Out', 'Closed Won', 'NRTB', 'Incorrect Product Fit', 'Replied']);
 
 // Effort ceilings so "chase the target" can't run the function past Netlify's

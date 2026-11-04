@@ -11,7 +11,7 @@ const DAILY_TARGET = parseInt(process.env.FOLLOWUP_DAILY_TARGET || process.env.F
 const COLD_DELAY_DAYS = 3;   // no open: follow up after 3 days
 const WARM_DELAY_DAYS = 3;   // opened no reply: follow up after 3 days
 const MAX_OUTREACH_COUNT = 3; // stop after 3 emails total
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 const PITCH_CONCURRENCY = 4; // parallel Anthropic follow-up generations
 
 function daysSince(iso) {

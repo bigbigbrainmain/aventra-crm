@@ -1,6 +1,6 @@
 const { TABS, rowToScheduled, rowToLead, getRange } = require('./_sheets');
 
-const APP_URL = process.env.APP_URL || 'https://aventra-crm.netlify.app';
+const APP_URL = (process.env.APP_URL || 'https://aventra-crm.netlify.app').replace(/\/+$/, ''); // env value has a trailing slash
 
 function isToday(iso) {
   if (!iso) return false;
